@@ -1,0 +1,168 @@
+{% extends "predictor/base.html" %}
+{% block title %}All Students · HC-XAI{% endblock %}
+
+{% block breadcrumb %}
+<div class="hc-breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <span class="current">All students</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="mb-1">All students</h2>
+        <p class="text-muted small mb-0">Every prediction recorded so far</p>
+    </div>
+    <a href="{% url 'predict_performance' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> New prediction
+    </a>
+</div>
+
+<div class="side-panel mb-4">
+    <div class="row g-2">
+        <div class="col-md-6">
+            <label for="searchInput" class="visually-hidden">Search by name or student ID</label>
+            <input type="text" class="form-control" id="searchInput" placeholder="Search by name or student ID...">
+        </div>
+        <div class="col-md-3">
+            <label for="categoryFilter" class="visually-hidden">Filter by category</label>
+            <select class="form-select" id="categoryFilter">
+                <option value="">All categories</option>
+                <option value="Excellent">Excellent</option>
+                <option value="Good">Good</option>
+                <option value="Average">Average</option>
+                <option value="Needs Attention">Needs Attention</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="sortSelect" class="visually-hidden">Sort students</label>
+            <select class="form-select" id="sortSelect">
+                <option value="score-desc">Sort: Highest score</option>
+                <option value="score-asc">Sort: Lowest score</option>
+                <option value="name-asc">Sort: Name (A-Z)</option>
+                <option value="name-desc">Sort: Name (Z-A)</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="side-panel p-0">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0" id="studentTable">
+            <caption class="visually-hidden">List of student predictions with score, category, and actions</caption>
+            <thead>
+                <tr class="text-muted small">
+                    <th class="border-0 ps-3" scope="col">Student</th>
+                    <th class="border-0" scope="col">Class</th>
+                    <th class="border-0" scope="col">Score</th>
+                    <th class="border-0" scope="col">Category</th>
+                    <th class="border-0" scope="col">Date</th>
+                    <th class="border-0 text-end pe-3" scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody id="studentTableBody">
+                {% for prediction in predictions|default:default_predictions %}
+                <tr data-name="{{ prediction.student_name|lower }}" data-id="{{ prediction.student_id|lower }}" data-category="{{ prediction.performance_category }}" data-score="{{ prediction.predicted_percentage }}">
+                    <td class="ps-3">
+                        <div class="fw-semibold small">{{ prediction.student_name }}</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">{{ prediction.student_id }}</div>
+                    </td>
+                    <td class="small text-muted">{{ prediction.class_year|default:"—" }}</td>
+                    <td class="fw-semibold small">{{ prediction.predicted_percentage }}%</td>
+                    <td>
+                        <span class="badge-category badge-{{ prediction.performance_category|slugify }}">{{ prediction.performance_category }}</span>
+                    </td>
+                    <td class="small text-muted">{{ prediction.created_at|date:"d M Y"|default:"—" }}</td>
+                    <td class="text-end pe-3">
+                        <a href="{% url 'report_detail' prediction.student_id %}" class="small text-decoration-none me-3">
+                            <i class="bi bi-eye me-1" aria-hidden="true"></i>View
+                        </a>
+                        <button type="button" class="btn btn-link btn-sm p-0 small text-muted text-decoration-none download-row-btn" data-student="{{ prediction.student_name }}">
+                            <i class="bi bi-download me-1" aria-hidden="true"></i>Download
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="hc-empty-state d-none" id="noResultsState">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <p class="mb-0">No students match your search or filter.</p>
+    </div>
+
+    {% if not predictions and not default_predictions %}
+    <div class="hc-empty-state">
+        <i class="bi bi-people" aria-hidden="true"></i>
+        <p class="mb-3">No predictions yet.</p>
+        <a href="{% url 'predict_performance' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Run your first prediction
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const tbody = document.getElementById('studentTableBody');
+    const noResults = document.getElementById('noResultsState');
+    const table = document.getElementById('studentTable');
+
+    function applyFilters() {
+        const query = searchInput.value.trim().toLowerCase();
+        const category = categoryFilter.value;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        let visibleCount = 0;
+        rows.forEach(row => {
+            const matchesQuery = !query || row.dataset.name.includes(query) || row.dataset.id.includes(query);
+            const matchesCategory = !category || row.dataset.category === category;
+            const show = matchesQuery && matchesCategory;
+            row.classList.toggle('d-none', !show);
+            if (show) visibleCount++;
+        });
+
+        table.classList.toggle('d-none', visibleCount === 0);
+        noResults.classList.toggle('d-none', visibleCount !== 0);
+    }
+
+    function applySort() {
+        const [key, direction] = sortSelect.value.split('-');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        rows.sort((a, b) => {
+            let valA, valB;
+            if (key === 'score') {
+                valA = parseFloat(a.dataset.score);
+                valB = parseFloat(b.dataset.score);
+            } else {
+                valA = a.dataset.name;
+                valB = b.dataset.name;
+            }
+            if (valA < valB) return direction === 'asc' ? -1 : 1;
+            if (valA > valB) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+    categoryFilter.addEventListener('change', applyFilters);
+    sortSelect.addEventListener('change', applySort);
+
+    document.querySelectorAll('.download-row-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const student = this.dataset.student;
+            showToast(`Download for ${student} will be available once the backend is connected.`, 'primary');
+        });
+    });
+})();
+</script>
+{% endblock %}

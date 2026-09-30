@@ -1,0 +1,392 @@
+{% extends "predictor/base.html" %}
+{% block title %}Predict Performance · HC-XAI{% endblock %}
+
+{% block breadcrumb %}
+<div class="hc-breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <span class="current">Predict performance</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="mb-1">Predict performance</h2>
+    <p class="text-muted small mb-0">Enter details manually or upload a CSV to run a prediction</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <ul class="nav nav-pills mb-4" id="entryTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-pane" type="button" role="tab">
+                    <i class="bi bi-pencil-square me-1"></i> Manual entry
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="csv-tab" data-bs-toggle="pill" data-bs-target="#csv-pane" type="button" role="tab">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Upload CSV
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="entryTabsContent">
+
+            <!-- Manual entry: multi-step wizard -->
+            <div class="tab-pane fade show active" id="manual-pane" role="tabpanel">
+
+                <div class="d-flex justify-content-between mb-4" id="stepIndicator">
+                    <div class="step-dot flex-fill text-center" data-step="1">
+                        <div class="step-circle mx-auto mb-1">1</div>
+                        <div class="small fw-semibold">Student</div>
+                    </div>
+                    <div class="step-dot flex-fill text-center" data-step="2">
+                        <div class="step-circle mx-auto mb-1">2</div>
+                        <div class="small fw-semibold">Academic</div>
+                    </div>
+                    <div class="step-dot flex-fill text-center" data-step="3">
+                        <div class="step-circle mx-auto mb-1">3</div>
+                        <div class="small fw-semibold">Study habits</div>
+                    </div>
+                    <div class="step-dot flex-fill text-center" data-step="4">
+                        <div class="step-circle mx-auto mb-1">4</div>
+                        <div class="small fw-semibold">Support</div>
+                    </div>
+                </div>
+
+                <form method="post" class="side-panel" id="manualForm">
+                    {% csrf_token %}
+
+                    <!-- Step 1: Student details -->
+                    <div class="form-step" data-step="1">
+                        <h6 class="fw-semibold mb-3"><i class="bi bi-person-badge me-1"></i> Student details</h6>
+                        <p class="text-muted small mb-3">Works for any school, college, or university — not tied to a specific institute's grading system.</p>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Student ID</label>
+                                <input type="text" name="student_id" class="form-control" placeholder="e.g. ST001" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Student name</label>
+                                <input type="text" name="student_name" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Grade / Class / Year</label>
+                                <input type="text" name="class_year" class="form-control" placeholder="e.g. Grade 10, Year 2, Semester 4" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Education level</label>
+                                <select name="education_level" class="form-select">
+                                    <option value="primary">Primary school</option>
+                                    <option value="secondary">Secondary / High school</option>
+                                    <option value="undergraduate" selected>Undergraduate</option>
+                                    <option value="postgraduate">Postgraduate</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Age</label>
+                                <input type="number" min="5" max="60" name="age" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Gender</label>
+                                <select name="gender" class="form-select">
+                                    <option value="">Prefer not to say</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Academic performance -->
+                    <div class="form-step d-none" data-step="2">
+                        <h6 class="fw-semibold mb-3"><i class="bi bi-clipboard-data me-1"></i> Academic performance</h6>
+
+                        <label class="form-label small fw-semibold mb-2">Previous / external exam</label>
+                        <div class="row g-3 mb-1">
+                            <div class="col-md-6">
+                                <input type="number" min="1" step="0.5" name="previous_total_marks" class="form-control marks-total" data-pair="previous" placeholder="Total marks" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="number" min="0" step="0.5" name="previous_gained_marks" class="form-control marks-gained" data-pair="previous" placeholder="Marks obtained" required>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-3">Calculated: <span id="previous_percent" class="fw-semibold">—</span></p>
+
+                        <label class="form-label small fw-semibold mb-2">Internal / midterm exam</label>
+                        <div class="row g-3 mb-1">
+                            <div class="col-md-6">
+                                <input type="number" min="1" step="0.5" name="internal_total_marks" class="form-control marks-total" data-pair="internal" placeholder="Total marks" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="number" min="0" step="0.5" name="internal_gained_marks" class="form-control marks-gained" data-pair="internal" placeholder="Marks obtained" required>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-3">Calculated: <span id="internal_percent" class="fw-semibold">—</span></p>
+
+                        <label class="form-label small fw-semibold mb-2">Assignments</label>
+                        <div class="row g-3 mb-1">
+                            <div class="col-md-6">
+                                <input type="number" min="1" name="total_assignments" class="form-control marks-total" data-pair="assignment" placeholder="Total assignments given" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="number" min="0" name="completed_assignments" class="form-control marks-gained" data-pair="assignment" placeholder="Assignments completed" required>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-3">Completion rate: <span id="assignment_percent" class="fw-semibold">—</span></p>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Backlogs / pending subjects</label>
+                                <input type="number" min="0" name="backlogs" class="form-control" value="0" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Past year/grade failures</label>
+                                <input type="number" min="0" max="5" name="past_failures" class="form-control" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Study habits & environment -->
+                    <div class="form-step d-none" data-step="3">
+                        <h6 class="fw-semibold mb-3"><i class="bi bi-clock-history me-1"></i> Study habits & environment</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Attendance (%)</label>
+                                <input type="number" step="0.1" min="0" max="100" name="attendance" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Study hours / week</label>
+                                <input type="number" step="0.5" min="0" name="study_hours" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Sleep hours / night</label>
+                                <input type="number" step="0.5" min="0" max="14" name="sleep_hours" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Mode of learning</label>
+                                <select name="learning_mode" class="form-select">
+                                    <option value="offline">In-person</option>
+                                    <option value="online">Online</option>
+                                    <option value="hybrid">Hybrid</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Tutoring sessions / month</label>
+                                <input type="number" min="0" name="tutoring_sessions" class="form-control" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Internet access at home</label>
+                                <select name="internet_access" class="form-select">
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Support & motivation -->
+                    <div class="form-step d-none" data-step="4">
+                        <h6 class="fw-semibold mb-3"><i class="bi bi-people me-1"></i> Support & motivation</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Participation score (1-10)</label>
+                                <input type="number" min="1" max="10" name="participation" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Motivation level</label>
+                                <select name="motivation_level" class="form-select">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Parental / guardian involvement</label>
+                                <select name="parental_involvement" class="form-select">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Extracurricular activities</label>
+                                <select name="extracurricular" class="form-select">
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" id="prevBtn" disabled>
+                            <i class="bi bi-arrow-left me-1"></i> Back
+                        </button>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="button" class="btn btn-primary" id="nextBtn">
+                                Next <i class="bi bi-arrow-right ms-1"></i>
+                            </button>
+                            <button type="submit" class="btn btn-primary d-none" id="manualSubmitBtn">
+                                <span class="btn-label"><i class="bi bi-cpu me-1"></i> Run prediction</span>
+                                <span class="btn-loading d-none">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>Analyzing...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- CSV upload -->
+            <div class="tab-pane fade" id="csv-pane" role="tabpanel">
+                <form method="post" enctype="multipart/form-data" class="side-panel" id="csvForm">
+                    {% csrf_token %}
+
+                    <h6 class="fw-semibold mb-2"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Upload student data (CSV)</h6>
+                    <p class="text-muted small mb-3">
+                        Columns expected: <code>student_id, student_name, class_year, education_level, age, gender, previous_total_marks, previous_gained_marks, internal_total_marks, internal_gained_marks, total_assignments, completed_assignments, backlogs, past_failures, attendance, study_hours, sleep_hours, learning_mode, tutoring_sessions, internet_access, participation, motivation_level, parental_involvement, extracurricular</code>.
+                        Works for any institute — marks are entered as totals and marks obtained, not pre-calculated percentages.
+                    </p>
+
+                    <div class="border rounded-3 p-4 text-center mb-3" style="border-style: dashed !important; background: var(--hc-surface);">
+                        <i class="bi bi-cloud-arrow-up fs-1 text-muted mb-2 d-block"></i>
+                        <input type="file" name="csv_file" accept=".csv" class="form-control" required>
+                        <p class="text-muted small mt-2 mb-0">Accepted format: .csv</p>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="#" class="small text-decoration-none">
+                            <i class="bi bi-download me-1"></i> Download sample template
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="csvSubmitBtn">
+                            <span class="btn-label"><i class="bi bi-cpu me-1"></i> Upload & predict</span>
+                            <span class="btn-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>Processing...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+.step-circle {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--hc-surface);
+    border: 2px solid var(--hc-border);
+    color: var(--hc-text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 600;
+    transition: all 0.2s ease;
+}
+.step-dot.active .step-circle {
+    background: var(--hc-accent);
+    border-color: var(--hc-accent);
+    color: #fff;
+}
+.step-dot.done .step-circle {
+    background: var(--hc-accent-soft);
+    border-color: var(--hc-accent);
+    color: var(--hc-accent);
+}
+.step-dot .small { color: var(--hc-text-muted); }
+.step-dot.active .small { color: var(--hc-text); }
+</style>
+
+<script>
+(function () {
+    const steps = document.querySelectorAll('.form-step');
+    const dots = document.querySelectorAll('.step-dot');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('manualSubmitBtn');
+    let current = 1;
+    const total = steps.length;
+
+    function showStep(n) {
+        steps.forEach(s => s.classList.toggle('d-none', parseInt(s.dataset.step) !== n));
+        dots.forEach(d => {
+            const step = parseInt(d.dataset.step);
+            d.classList.toggle('active', step === n);
+            d.classList.toggle('done', step < n);
+        });
+        prevBtn.disabled = n === 1;
+        nextBtn.classList.toggle('d-none', n === total);
+        submitBtn.classList.toggle('d-none', n !== total);
+    }
+
+    function currentStepValid() {
+        const activeStep = document.querySelector(`.form-step[data-step="${current}"]`);
+        const inputs = activeStep.querySelectorAll('input, select');
+        for (const el of inputs) {
+            if (!el.checkValidity()) { el.reportValidity(); return false; }
+        }
+        return true;
+    }
+
+    nextBtn.addEventListener('click', function () {
+        if (!currentStepValid()) return;
+        if (current < total) { current++; showStep(current); }
+    });
+
+    prevBtn.addEventListener('click', function () {
+        if (current > 1) { current--; showStep(current); }
+    });
+
+    document.getElementById('manualForm').addEventListener('submit', function (e) {
+        if (!currentStepValid()) { e.preventDefault(); return; }
+        submitBtn.querySelector('.btn-label').classList.add('d-none');
+        submitBtn.querySelector('.btn-loading').classList.remove('d-none');
+        submitBtn.disabled = true;
+    });
+
+    showStep(current);
+})();
+
+// Live percentage calculation for marks-based pairs
+(function () {
+    const pairs = ['previous', 'internal', 'assignment'];
+    pairs.forEach(pair => {
+        const totalInput = document.querySelector(`[data-pair="${pair}"].marks-total`);
+        const gainedInput = document.querySelector(`[data-pair="${pair}"].marks-gained`);
+        const output = document.getElementById(pair + '_percent');
+
+        function update() {
+            const total = parseFloat(totalInput.value);
+            const gained = parseFloat(gainedInput.value);
+            if (total > 0 && gained >= 0) {
+                const pct = ((gained / total) * 100).toFixed(1);
+                output.textContent = pct + '%';
+            } else {
+                output.textContent = '—';
+            }
+        }
+
+        totalInput.addEventListener('input', update);
+        gainedInput.addEventListener('input', update);
+    });
+})();
+
+// CSV form loading state
+(function () {
+    const form = document.getElementById('csvForm');
+    const btn = document.getElementById('csvSubmitBtn');
+    form.addEventListener('submit', function () {
+        if (!form.checkValidity()) return;
+        btn.querySelector('.btn-label').classList.add('d-none');
+        btn.querySelector('.btn-loading').classList.remove('d-none');
+        btn.disabled = true;
+    });
+})();
+</script>
+{% endblock %}

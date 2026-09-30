@@ -1,0 +1,295 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HC-XAI{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'predictor/css/style.css' %}">
+</head>
+<body>
+
+    <a href="#mainContent" class="visually-hidden-focusable">Skip to main content</a>
+
+    <header class="app-header">
+        <nav class="navbar navbar-expand-md" aria-label="Main navigation">
+            <div class="container">
+                <a href="{% url 'landing' %}" class="app-brand d-flex align-items-center gap-2 text-decoration-none navbar-brand fw-semibold m-0">
+                    <i class="bi bi-mortarboard-fill fs-4" aria-hidden="true"></i>
+                    <span>HC-XAI</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navMain">
+                    <ul class="navbar-nav ms-auto align-items-md-center gap-md-4 py-2 py-md-0">
+                        <li class="nav-item">
+                            <a href="{% url 'dashboard' %}" class="nav-link-custom {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'student_list' %}" class="nav-link-custom {% if request.resolver_match.url_name == 'student_list' %}active{% endif %}" {% if request.resolver_match.url_name == 'student_list' %}aria-current="page"{% endif %}>Students</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'student_list' %}" class="nav-link-custom">Reports</a>
+                        </li>
+                        {% if user.is_authenticated %}
+                        <li class="nav-item dropdown pt-3 pt-md-0 mt-2 mt-md-0 ps-md-3 border-top border-md-top-0 border-md-start">
+                            <button class="btn btn-sm d-flex align-items-center gap-2 border-0 bg-transparent p-0 dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="avatar-badge" aria-hidden="true">{{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}</div>
+                                <span class="small nav-link-custom">{{ user.get_full_name|default:user.username }}</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="profileDropdown" style="border-radius: 12px; min-width: 200px;">
+                                <li>
+                                    <div class="px-3 py-2">
+                                        <div class="fw-semibold small">{{ user.get_full_name|default:user.username }}</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">{{ user.email|default:"No email set" }}</div>
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item small" href="{% url 'profile' %}">
+                                        <i class="bi bi-person me-2" aria-hidden="true"></i>Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item small" href="#">
+                                        <i class="bi bi-gear me-2" aria-hidden="true"></i>Settings
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item small text-danger" href="{% url 'logout' %}">
+                                        <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Logout
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a href="{% url 'login' %}" class="nav-link-custom">Login</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container py-4" id="mainContent">
+        {% block breadcrumb %}{% endblock %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <button id="backToTopBtn" class="btn btn-primary d-none" aria-label="Back to top" title="Back to top">
+        <i class="bi bi-arrow-up" aria-hidden="true"></i>
+    </button>
+
+    <footer class="app-footer">
+        <div class="container d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 py-3 small text-muted">
+            <span>HC-XAI Student Performance Predictor &middot; v1.0</span>
+            <div class="d-flex gap-4">
+                <a href="#" class="text-muted text-decoration-none" data-bs-toggle="modal" data-bs-target="#aboutModal">About</a>
+                <a href="#" class="text-muted text-decoration-none" data-bs-toggle="modal" data-bs-target="#helpModal">Help</a>
+                <a href="#" class="text-muted text-decoration-none" data-bs-toggle="modal" data-bs-target="#contactModal">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast container: used both for server-side Django messages and client-side JS toasts -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;" id="toastContainer" aria-live="polite" aria-atomic="true">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="toast align-items-center text-bg-{{ message.tags|default:'primary' }} border-0 show" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-check-circle me-2" aria-hidden="true"></i>{{ message }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Dismiss notification"></button>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal fade" id="aboutModal" tabindex="-1" aria-hidden="true" aria-labelledby="aboutModalLabel">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px; border: none;">
+                <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="action-icon" style="width: 48px; height: 48px; font-size: 1.3rem;" aria-hidden="true">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close about dialog"></button>
+                    </div>
+                    <h5 class="fw-bold mb-2" id="aboutModalLabel">About HC-XAI</h5>
+                    <p class="small text-muted mb-4">
+                        Human-Centered Explainable AI for student performance prediction — built for teachers, not data scientists.
+                    </p>
+
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="doc-icon flex-shrink-0" aria-hidden="true"><i class="bi bi-cpu"></i></div>
+                        <div>
+                            <div class="fw-semibold small">ML-powered predictions</div>
+                            <div class="text-muted small">A Random Forest model trained on academic and behavioral data.</div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="doc-icon flex-shrink-0" aria-hidden="true"><i class="bi bi-lightbulb"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Explainable, not a black box</div>
+                            <div class="text-muted small">SHAP-based reasoning behind every prediction, in plain language.</div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3 mb-4">
+                        <div class="doc-icon flex-shrink-0" aria-hidden="true"><i class="bi bi-file-earmark-pdf"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Report generation</div>
+                            <div class="text-muted small">Turn any prediction into a downloadable PDF report.</div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-badge" style="width: 42px; height: 42px; font-size: 14px;" aria-hidden="true">IB</div>
+                        <div>
+                            <div class="fw-semibold small">Ishwar Bachhav</div>
+                            <div class="text-muted small">MCA Final Year &middot; Research Project</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true" aria-labelledby="helpModalLabel">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px; border: none;">
+                <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="action-icon" style="width: 48px; height: 48px; font-size: 1.3rem;" aria-hidden="true">
+                            <i class="bi bi-question-circle-fill"></i>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close help dialog"></button>
+                    </div>
+                    <h5 class="fw-bold mb-2" id="helpModalLabel">Help & FAQ</h5>
+                    <p class="small text-muted mb-4">Quick answers to common questions.</p>
+
+                    <div class="accordion" id="helpAccordion">
+                        <div class="accordion-item border-0 mb-2" style="background: var(--hc-surface); border-radius: 10px; overflow: hidden;">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed small fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" style="background: transparent; box-shadow: none;">
+                                    <i class="bi bi-play-circle me-2" aria-hidden="true"></i> How do I run a prediction?
+                                </button>
+                            </h2>
+                            <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body small text-muted pt-0">
+                                    Go to Dashboard → Predict performance, then either fill the form manually or upload a CSV file.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0 mb-2" style="background: var(--hc-surface); border-radius: 10px; overflow: hidden;">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed small fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" style="background: transparent; box-shadow: none;">
+                                    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i> What does "Needs Attention" mean?
+                                </button>
+                            </h2>
+                            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body small text-muted pt-0">
+                                    It flags students whose predicted score falls below the passing threshold, so you can intervene early.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0" style="background: var(--hc-surface); border-radius: 10px; overflow: hidden;">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed small fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" style="background: transparent; box-shadow: none;">
+                                    <i class="bi bi-download me-2" aria-hidden="true"></i> Can I download a report?
+                                </button>
+                            </h2>
+                            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body small text-muted pt-0">
+                                    Yes — open any student's report page and click "Download PDF".
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Modal -->
+    <div class="modal fade" id="contactModal" tabindex="-1" aria-hidden="true" aria-labelledby="contactModalLabel">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px; border: none;">
+                <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="action-icon" style="width: 48px; height: 48px; font-size: 1.3rem;" aria-hidden="true">
+                            <i class="bi bi-envelope-fill"></i>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close contact dialog"></button>
+                    </div>
+                    <h5 class="fw-bold mb-2" id="contactModalLabel">Get in touch</h5>
+                    <p class="small text-muted mb-4">Questions, bugs, or feature ideas — reach out anytime.</p>
+
+                    <a href="mailto:ishwarbachhav2611@gmail.com" class="doc-row text-decoration-none d-flex mb-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="doc-icon" aria-hidden="true"><i class="bi bi-envelope"></i></div>
+                            <div>
+                                <div class="fw-semibold small">Email</div>
+                                <div class="text-muted small">ishwarbachhav2611@gmail.com</div>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="https://github.com/ishwarbachhav2611" target="_blank" rel="noopener" class="doc-row text-decoration-none d-flex">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="doc-icon" aria-hidden="true"><i class="bi bi-github"></i></div>
+                            <div>
+                                <div class="fw-semibold small">GitHub</div>
+                                <div class="text-muted small">github.com/ishwarbachhav2611</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Reusable toast helper for client-side JS actions (downloads, demo actions, etc.)
+        function showToast(message, type) {
+            type = type || 'primary';
+            const container = document.getElementById('toastContainer');
+            const toastEl = document.createElement('div');
+            toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+            toastEl.setAttribute('role', 'alert');
+            toastEl.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body"><i class="bi bi-info-circle me-2" aria-hidden="true"></i>${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Dismiss notification"></button>
+                </div>`;
+            container.appendChild(toastEl);
+            const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+            toast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+
+        // Back to top button
+        const backToTopBtn = document.getElementById('backToTopBtn');
+        window.addEventListener('scroll', function () {
+            backToTopBtn.classList.toggle('d-none', window.scrollY < 400);
+        });
+        backToTopBtn.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>

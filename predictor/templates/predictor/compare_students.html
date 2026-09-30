@@ -1,0 +1,375 @@
+{% extends "predictor/base.html" %}
+{% block title %}Compare Students · HC-XAI{% endblock %}
+
+{% block breadcrumb %}
+<div class="hc-breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <span class="current">Compare students</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="mb-1">Compare students</h2>
+    <p class="text-muted small mb-0">Search existing records, or upload a file to compare new data</p>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-5">
+        <div class="side-panel">
+            <label class="form-label small fw-semibold mb-2" id="labelA"><i class="bi bi-person me-1" aria-hidden="true"></i> Student A</label>
+            <ul class="nav nav-pills nav-sm mb-3" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active py-1 px-2 small" data-bs-toggle="pill" data-bs-target="#a-search" type="button">Search</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link py-1 px-2 small" data-bs-toggle="pill" data-bs-target="#a-upload" type="button">Upload</button>
+                </li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="a-search">
+                    <input type="text" class="form-control compare-input" data-target="A" placeholder="Try: ST001, ST002, ST003, ST004" list="studentOptions" autocomplete="off" aria-labelledby="labelA">
+                </div>
+                <div class="tab-pane fade" id="a-upload">
+                    <input type="file" class="form-control compare-upload" data-target="A" accept=".csv" aria-label="Upload CSV for Student A">
+                    <p class="text-muted small mt-2 mb-0">Accepts .csv only</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2 d-flex align-items-center justify-content-center">
+        <div class="action-icon" style="width: 44px; height: 44px;" aria-hidden="true">
+            <i class="bi bi-arrow-left-right"></i>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="side-panel">
+            <label class="form-label small fw-semibold mb-2" id="labelB"><i class="bi bi-person me-1" aria-hidden="true"></i> Student B</label>
+            <ul class="nav nav-pills nav-sm mb-3" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active py-1 px-2 small" data-bs-toggle="pill" data-bs-target="#b-search" type="button">Search</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link py-1 px-2 small" data-bs-toggle="pill" data-bs-target="#b-upload" type="button">Upload</button>
+                </li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="b-search">
+                    <input type="text" class="form-control compare-input" data-target="B" placeholder="Try: ST001, ST002, ST003, ST004" list="studentOptions" autocomplete="off" aria-labelledby="labelB">
+                </div>
+                <div class="tab-pane fade" id="b-upload">
+                    <input type="file" class="form-control compare-upload" data-target="B" accept=".csv" aria-label="Upload CSV for Student B">
+                    <p class="text-muted small mt-2 mb-0">Accepts .csv only</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<datalist id="studentOptions">
+    <option value="ST001">
+    <option value="ST002">
+    <option value="ST003">
+    <option value="ST004">
+</datalist>
+
+<div class="text-center mb-4">
+    <button class="btn btn-primary px-4" id="compareBtn">
+        <span class="btn-label"><i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i> Compare</span>
+        <span class="btn-loading d-none">
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>Comparing...
+        </span>
+    </button>
+    <div id="compareError" class="text-danger small mt-2 d-none" role="alert">
+        <i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>
+        <span id="compareErrorText">Enter valid IDs for both students.</span>
+    </div>
+</div>
+
+<div id="comparisonResult" class="d-none" aria-live="polite">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="side-panel h-100" id="cardA">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="avatar-badge" style="width: 52px; height: 52px; font-size: 16px;" id="avatarA" aria-hidden="true">—</div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-semibold mb-0" id="nameA">—</h6>
+                        <div class="text-muted small" id="metaA">—</div>
+                    </div>
+                    <span class="badge-category" id="categoryA">—</span>
+                </div>
+                <div class="text-center py-3 mb-3" style="background: var(--hc-surface); border-radius: 10px;">
+                    <div class="stat-label mb-1">Predicted score</div>
+                    <div class="display-6 fw-bold text-primary" id="scoreA">—%</div>
+                </div>
+                <div id="statsA"></div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="side-panel h-100" id="cardB">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="avatar-badge" style="width: 52px; height: 52px; font-size: 16px;" id="avatarB" aria-hidden="true">—</div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-semibold mb-0" id="nameB">—</h6>
+                        <div class="text-muted small" id="metaB">—</div>
+                    </div>
+                    <span class="badge-category" id="categoryB">—</span>
+                </div>
+                <div class="text-center py-3 mb-3" style="background: var(--hc-surface); border-radius: 10px;">
+                    <div class="stat-label mb-1">Predicted score</div>
+                    <div class="display-6 fw-bold text-primary" id="scoreB">—%</div>
+                </div>
+                <div id="statsB"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="side-panel mb-4">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-bar-chart-line me-1" aria-hidden="true"></i> Factor-by-factor comparison</h6>
+        <div id="factorComparisonTable"></div>
+    </div>
+
+    <div class="side-panel mb-4">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-lightbulb me-1" aria-hidden="true"></i> Key insights</h6>
+        <div id="keyInsights"></div>
+    </div>
+
+    <div class="side-panel mb-4" style="background: var(--hc-accent-soft); border: none;">
+        <div class="d-flex gap-3">
+            <div class="action-icon flex-shrink-0" style="background: #fff;" aria-hidden="true"><i class="bi bi-clipboard-check"></i></div>
+            <div>
+                <h6 class="fw-semibold mb-2">Conclusion</h6>
+                <p class="small mb-0" id="conclusionText">—</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <button class="btn btn-outline-secondary px-4" id="downloadReportBtn">
+            <span class="btn-label"><i class="bi bi-download me-1" aria-hidden="true"></i> Download comparison report</span>
+            <span class="btn-loading d-none">
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>Preparing...
+            </span>
+        </button>
+    </div>
+</div>
+
+<div class="hc-empty-state" id="compareEmptyState">
+    <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+    <p class="mb-0">Enter a student ID on both sides, then click <strong>Compare</strong> to see them side by side.</p>
+</div>
+
+<script>
+const STUDENT_DATA = {
+    "ST001": { name: "Rahul Verma", classYear: "TE-B", score: 82, category: "Good",
+        factors: [
+            {name: "Attendance", icon: "bi-calendar-check", value: 78, unit: "%"},
+            {name: "Previous marks", icon: "bi-journal-text", value: 80, unit: "%"},
+            {name: "Assignment completion", icon: "bi-clipboard-data", value: 85, unit: "%"},
+            {name: "Study hours/week", icon: "bi-clock-history", value: 12, unit: "hrs"},
+            {name: "Participation", icon: "bi-hand-thumbs-up", value: 7, unit: "/10"},
+            {name: "Backlogs", icon: "bi-exclamation-triangle", value: 1, unit: "", lowerIsBetter: true},
+        ] },
+    "ST002": { name: "Priya Nair", classYear: "TE-A", score: 91, category: "Excellent",
+        factors: [
+            {name: "Attendance", icon: "bi-calendar-check", value: 95, unit: "%"},
+            {name: "Previous marks", icon: "bi-journal-text", value: 93, unit: "%"},
+            {name: "Assignment completion", icon: "bi-clipboard-data", value: 97, unit: "%"},
+            {name: "Study hours/week", icon: "bi-clock-history", value: 18, unit: "hrs"},
+            {name: "Participation", icon: "bi-hand-thumbs-up", value: 9, unit: "/10"},
+            {name: "Backlogs", icon: "bi-exclamation-triangle", value: 0, unit: "", lowerIsBetter: true},
+        ] },
+    "ST003": { name: "Amit Joshi", classYear: "TE-B", score: 56, category: "Average",
+        factors: [
+            {name: "Attendance", icon: "bi-calendar-check", value: 60, unit: "%"},
+            {name: "Previous marks", icon: "bi-journal-text", value: 58, unit: "%"},
+            {name: "Assignment completion", icon: "bi-clipboard-data", value: 62, unit: "%"},
+            {name: "Study hours/week", icon: "bi-clock-history", value: 6, unit: "hrs"},
+            {name: "Participation", icon: "bi-hand-thumbs-up", value: 5, unit: "/10"},
+            {name: "Backlogs", icon: "bi-exclamation-triangle", value: 3, unit: "", lowerIsBetter: true},
+        ] },
+    "ST004": { name: "Sneha Patil", classYear: "TE-C", score: 39, category: "Needs Attention",
+        factors: [
+            {name: "Attendance", icon: "bi-calendar-check", value: 45, unit: "%"},
+            {name: "Previous marks", icon: "bi-journal-text", value: 40, unit: "%"},
+            {name: "Assignment completion", icon: "bi-clipboard-data", value: 38, unit: "%"},
+            {name: "Study hours/week", icon: "bi-clock-history", value: 3, unit: "hrs"},
+            {name: "Participation", icon: "bi-hand-thumbs-up", value: 3, unit: "/10"},
+            {name: "Backlogs", icon: "bi-exclamation-triangle", value: 5, unit: "", lowerIsBetter: true},
+        ] },
+};
+
+function slugifyCategory(cat) { return cat.toLowerCase().replace(/\s+/g, '-'); }
+function initials(name) { return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(); }
+
+function renderCard(target, data) {
+    document.getElementById('avatar' + target).textContent = initials(data.name);
+    document.getElementById('name' + target).textContent = data.name;
+    document.getElementById('meta' + target).textContent = data.classYear;
+    document.getElementById('score' + target).textContent = data.score + '%';
+    const badge = document.getElementById('category' + target);
+    badge.textContent = data.category;
+    badge.className = 'badge-category badge-' + slugifyCategory(data.category);
+
+    const statsEl = document.getElementById('stats' + target);
+    statsEl.innerHTML = data.factors.map(f => `
+        <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <div class="doc-icon" aria-hidden="true"><i class="bi ${f.icon}"></i></div>
+                <span class="small">${f.name}</span>
+            </div>
+            <span class="fw-semibold small">${f.value}${f.unit}</span>
+        </div>
+    `).join('');
+}
+
+function renderFactorTable(dataA, dataB) {
+    const container = document.getElementById('factorComparisonTable');
+    container.innerHTML = dataA.factors.map((factorA, i) => {
+        const factorB = dataB.factors[i];
+        const lowerIsBetter = !!factorA.lowerIsBetter;
+        const aWins = lowerIsBetter ? factorA.value < factorB.value : factorA.value > factorB.value;
+        const bWins = lowerIsBetter ? factorB.value < factorA.value : factorB.value > factorA.value;
+        return `
+        <div class="d-flex align-items-center py-2 border-bottom">
+            <div class="d-flex align-items-center gap-2" style="width: 40%;">
+                <div class="doc-icon" aria-hidden="true"><i class="bi ${factorA.icon}"></i></div>
+                <span class="small fw-semibold">${factorA.name}</span>
+            </div>
+            <div class="text-center flex-fill">
+                <span class="fw-semibold ${aWins ? 'text-success' : ''}">${factorA.value}${factorA.unit}</span>
+                ${aWins ? '<i class="bi bi-check-circle-fill text-success ms-1 small" aria-hidden="true"></i>' : ''}
+            </div>
+            <div class="text-muted small" style="width: 10%; text-align:center;">vs</div>
+            <div class="text-center flex-fill">
+                <span class="fw-semibold ${bWins ? 'text-success' : ''}">${factorB.value}${factorB.unit}</span>
+                ${bWins ? '<i class="bi bi-check-circle-fill text-success ms-1 small" aria-hidden="true"></i>' : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderKeyInsights(dataA, dataB) {
+    const insights = [];
+    const scoreDiff = Math.abs(dataA.score - dataB.score);
+    const leader = dataA.score >= dataB.score ? dataA : dataB;
+    const trailer = dataA.score >= dataB.score ? dataB : dataA;
+
+    insights.push({ icon: 'bi-graph-up-arrow', text: `${leader.name} scores ${scoreDiff} points higher overall than ${trailer.name}.` });
+
+    dataA.factors.forEach((fA, i) => {
+        const fB = dataB.factors[i];
+        const diff = Math.abs(fA.value - fB.value);
+        const lowerIsBetter = !!fA.lowerIsBetter;
+        const aBetter = lowerIsBetter ? fA.value < fB.value : fA.value > fB.value;
+        if (diff === 0) return;
+        const ahead = aBetter ? dataA.name : dataB.name;
+        if (fA.name === 'Backlogs' && diff > 0) {
+            insights.push({ icon: 'bi-exclamation-triangle', text: `${ahead} has fewer pending backlogs, reducing academic risk.` });
+        } else if (diff >= 15 || (fA.name === 'Study hours/week' && diff >= 5)) {
+            insights.push({ icon: 'bi-star', text: `Biggest gap: ${fA.name} — ${ahead} leads by ${diff}${fA.unit}.` });
+        }
+    });
+
+    document.getElementById('keyInsights').innerHTML = insights.map(i => `
+        <div class="d-flex align-items-start gap-2 mb-2">
+            <i class="bi ${i.icon} text-primary mt-1" aria-hidden="true"></i>
+            <span class="small">${i.text}</span>
+        </div>
+    `).join('');
+}
+
+function renderConclusion(dataA, dataB) {
+    const leader = dataA.score >= dataB.score ? dataA : dataB;
+    const trailer = dataA.score >= dataB.score ? dataB : dataA;
+    const diff = Math.abs(dataA.score - dataB.score);
+
+    let recommendation;
+    if (trailer.category === 'Needs Attention' || trailer.category === 'Average') {
+        recommendation = `Consider prioritizing intervention for ${trailer.name} — improving attendance and reducing backlogs would likely close much of this gap.`;
+    } else {
+        recommendation = `Both students are performing reasonably well; the gap is modest and likely reflects normal variation rather than a cause for concern.`;
+    }
+
+    document.getElementById('conclusionText').textContent =
+        `${leader.name} is predicted to outperform ${trailer.name} by ${diff} percentage points, primarily driven by differences in attendance and study consistency. ${recommendation}`;
+}
+
+const compareBtn = document.getElementById('compareBtn');
+const errorBox = document.getElementById('compareError');
+const errorText = document.getElementById('compareErrorText');
+const resultEl = document.getElementById('comparisonResult');
+const emptyEl = document.getElementById('compareEmptyState');
+
+function setLoading(isLoading) {
+    compareBtn.querySelector('.btn-label').classList.toggle('d-none', isLoading);
+    compareBtn.querySelector('.btn-loading').classList.toggle('d-none', !isLoading);
+    compareBtn.disabled = isLoading;
+}
+
+function showError(message) {
+    errorText.textContent = message;
+    errorBox.classList.remove('d-none');
+    resultEl.classList.add('d-none');
+    emptyEl.classList.remove('d-none');
+}
+
+function hideError() { errorBox.classList.add('d-none'); }
+
+compareBtn.addEventListener('click', function () {
+    hideError();
+    const idA = document.querySelector('.compare-input[data-target="A"]').value.trim().toUpperCase();
+    const idB = document.querySelector('.compare-input[data-target="B"]').value.trim().toUpperCase();
+
+    if (!idA || !idB) { showError('Please enter a student ID on both sides.'); return; }
+
+    const dataA = STUDENT_DATA[idA];
+    const dataB = STUDENT_DATA[idB];
+
+    if (!dataA || !dataB) {
+        showError(`No record found for ${!dataA ? idA : idB}. Try ST001–ST004 for this demo.`);
+        return;
+    }
+
+    setLoading(true);
+    setTimeout(function () {
+        renderCard('A', dataA);
+        renderCard('B', dataB);
+        renderFactorTable(dataA, dataB);
+        renderKeyInsights(dataA, dataB);
+        renderConclusion(dataA, dataB);
+        resultEl.classList.remove('d-none');
+        emptyEl.classList.add('d-none');
+        setLoading(false);
+    }, 600);
+});
+
+document.getElementById('downloadReportBtn').addEventListener('click', function () {
+    const btn = this;
+    btn.querySelector('.btn-label').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    setTimeout(function () {
+        btn.querySelector('.btn-label').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+        btn.disabled = false;
+        showToast('PDF export will be available once the backend is connected.', 'primary');
+    }, 800);
+});
+
+// Upload tabs: acknowledge file selection since actual parsing isn't wired up yet
+document.querySelectorAll('.compare-upload').forEach(function (input) {
+    input.addEventListener('change', function () {
+        if (this.files.length > 0) {
+            showToast(`"${this.files[0].name}" selected. CSV parsing will be available once the backend is connected.`, 'primary');
+        }
+    });
+});
+</script>
+{% endblock %}

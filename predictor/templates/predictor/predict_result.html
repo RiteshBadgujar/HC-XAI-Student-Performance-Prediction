@@ -1,0 +1,111 @@
+{% extends "predictor/base.html" %}
+{% block title %}Prediction Result · HC-XAI{% endblock %}
+
+{% block breadcrumb %}
+<div class="hc-breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <a href="{% url 'predict_performance' %}">Predict performance</a>
+    <span class="sep">/</span>
+    <span class="current">Result</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="mb-1">Prediction result</h2>
+    <p class="text-muted small mb-0">{{ student_name|default:"Rahul Verma" }} &middot; {{ student_id|default:"ST001" }} &middot; {{ class_year|default:"TE-B" }}</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="side-panel text-center">
+            <div class="stat-label mb-2">Predicted performance</div>
+            <div class="display-5 fw-bold text-primary mb-1">{{ predicted_percentage|default:"78.5" }}%</div>
+            <span class="badge-category badge-{{ performance_category|default:"good"|slugify }} fs-6 px-3 py-2">
+                {{ performance_category|default:"Good" }}
+            </span>
+
+            <hr class="my-4">
+
+            <button class="btn btn-primary w-100 mb-2" id="downloadPdfBtn">
+                <span class="btn-label"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> Generate PDF report</span>
+                <span class="btn-loading d-none">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>Generating...
+                </span>
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-house me-1" aria-hidden="true"></i> Back to dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="side-panel mb-4">
+            <h6 class="fw-semibold mb-3"><i class="bi bi-bar-chart-line me-1" aria-hidden="true"></i> Factor impact (SHAP)</h6>
+            <div id="factor-chart">
+                {% for factor in factors|default:default_factors %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span><i class="bi bi-dot" aria-hidden="true"></i>{{ factor.name }}</span>
+                        <span class="fw-semibold {% if factor.impact > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if factor.impact > 0 %}+{% endif %}{{ factor.impact }}
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 8px; border-radius: 6px;" role="progressbar" aria-valuenow="{{ factor.bar_width|default:50 }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar {% if factor.impact > 0 %}bg-success{% else %}bg-danger{% endif %}"
+                             style="width: {{ factor.bar_width|default:50 }}%; border-radius: 6px;"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted small mb-0">No factor data available yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="side-panel h-100">
+                    <h6 class="fw-semibold mb-3 text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i> Positive factors</h6>
+                    <ul class="small mb-0 ps-3">
+                        {% for point in positive_points|default:default_positive %}
+                        <li class="mb-2">{{ point }}</li>
+                        {% empty %}
+                        <li class="text-muted">None identified</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="side-panel h-100">
+                    <h6 class="fw-semibold mb-3 text-danger"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i> Areas to improve</h6>
+                    <ul class="small mb-0 ps-3">
+                        {% for point in improve_points|default:default_improve %}
+                        <li class="mb-2">{{ point }}</li>
+                        {% empty %}
+                        <li class="text-muted">None identified</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('downloadPdfBtn').addEventListener('click', function () {
+    const btn = this;
+    btn.querySelector('.btn-label').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    // Placeholder — replace with real PDF generation call once ReportLab backend exists
+    setTimeout(function () {
+        btn.querySelector('.btn-label').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+        btn.disabled = false;
+        showToast('PDF generation will be available once the backend is connected.', 'primary');
+    }, 800);
+});
+</script>
+{% endblock %}

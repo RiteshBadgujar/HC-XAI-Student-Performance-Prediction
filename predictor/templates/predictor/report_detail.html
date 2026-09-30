@@ -1,0 +1,106 @@
+{% extends "predictor/base.html" %}
+{% block title %}{{ student_name|default:"Rahul Verma" }} · Report · HC-XAI{% endblock %}
+
+{% block breadcrumb %}
+<div class="hc-breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <a href="{% url 'student_list' %}">All students</a>
+    <span class="sep">/</span>
+    <span class="current">{{ student_name|default:"Rahul Verma" }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <div>
+            <h2 class="mb-1">{{ student_name|default:"Rahul Verma" }}</h2>
+            <p class="text-muted small mb-0">{{ student_id|default:"ST001" }} &middot; {{ class_year|default:"TE-B" }} &middot; Predicted on {{ created_at|default:"28 Aug 2026" }}</p>
+        </div>
+        <button class="btn btn-primary no-print" id="downloadReportBtn">
+            <span class="btn-label"><i class="bi bi-download me-1" aria-hidden="true"></i> Download PDF</span>
+            <span class="btn-loading d-none">
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>Preparing...
+            </span>
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="side-panel text-center">
+            <div class="stat-label mb-2">Predicted performance</div>
+            <div class="display-5 fw-bold text-primary mb-1">{{ predicted_percentage|default:"82" }}%</div>
+            <span class="badge-category badge-{{ performance_category|default:"good"|slugify }} fs-6 px-3 py-2">
+                {{ performance_category|default:"Good" }}
+            </span>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="side-panel mb-4">
+            <h6 class="fw-semibold mb-3"><i class="bi bi-bar-chart-line me-1" aria-hidden="true"></i> Factor impact (SHAP)</h6>
+            {% for factor in factors %}
+            <div class="mb-3">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>{{ factor.name }}</span>
+                    <span class="fw-semibold {% if factor.impact > 0 %}text-success{% else %}text-danger{% endif %}">
+                        {% if factor.impact > 0 %}+{% endif %}{{ factor.impact }}
+                    </span>
+                </div>
+                <div class="progress" style="height: 8px; border-radius: 6px;" role="progressbar" aria-valuenow="{{ factor.bar_width }}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar {% if factor.impact > 0 %}bg-success{% else %}bg-danger{% endif %}"
+                         style="width: {{ factor.bar_width }}%; border-radius: 6px;"></div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted small mb-0">No factor data available.</p>
+            {% endfor %}
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="side-panel h-100">
+                    <h6 class="fw-semibold mb-3 text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i> Positive factors</h6>
+                    <ul class="small mb-0 ps-3">
+                        {% for point in positive_points %}
+                        <li class="mb-2">{{ point }}</li>
+                        {% empty %}
+                        <li class="mb-2 text-muted">None identified</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="side-panel h-100">
+                    <h6 class="fw-semibold mb-3 text-danger"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i> Areas to improve</h6>
+                    <ul class="small mb-0 ps-3">
+                        {% for point in improve_points %}
+                        <li class="mb-2">{{ point }}</li>
+                        {% empty %}
+                        <li class="mb-2 text-muted">None identified</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('downloadReportBtn').addEventListener('click', function () {
+    const btn = this;
+    btn.querySelector('.btn-label').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    setTimeout(function () {
+        btn.querySelector('.btn-label').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+        btn.disabled = false;
+        showToast('PDF download will be available once the backend is connected.', 'primary');
+    }, 800);
+});
+</script>
+{% endblock %}

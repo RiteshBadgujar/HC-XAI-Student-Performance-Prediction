@@ -1,0 +1,180 @@
+{% extends "predictor/base.html" %}
+{% block title %}My Profile · HC-XAI{% endblock %}
+
+{% block breadcrumb %}
+<div class="hc-breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <span class="sep">/</span>
+    <span class="current">Profile</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="mb-1">My profile</h2>
+    <p class="text-muted small mb-0">Update your details below</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+
+        <div class="side-panel mb-4 d-flex align-items-center gap-3">
+            <div class="avatar-badge" style="width: 56px; height: 56px; font-size: 18px;" aria-hidden="true">
+                {{ user.first_name|slice:":1"|upper|default:"T" }}{{ user.last_name|slice:":1"|upper }}
+            </div>
+            <div>
+                <h5 class="mb-1">{{ user.get_full_name|default:user.username|default:"Ishwar Bachhav" }}</h5>
+                <p class="text-muted small mb-0">Teacher &middot; {{ department|default:"Computer Science" }}</p>
+            </div>
+        </div>
+
+        <form id="profileForm" class="side-panel mb-4">
+            {% csrf_token %}
+
+            <h6 class="fw-semibold mb-3"><i class="bi bi-person-badge me-1" aria-hidden="true"></i> Personal details</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label for="id_full_name" class="form-label small fw-semibold">Full name</label>
+                    <input type="text" id="id_full_name" name="full_name" class="form-control" value="{{ user.get_full_name|default:'Ishwar Bachhav' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="id_department" class="form-label small fw-semibold">Department</label>
+                    <input type="text" id="id_department" name="department" class="form-control" value="{{ department|default:'Computer Science' }}" placeholder="e.g. Computer Science">
+                </div>
+                <div class="col-md-6">
+                    <label for="id_phone" class="form-label small fw-semibold">Phone number</label>
+                    <input type="tel" id="id_phone" name="phone" class="form-control" value="{{ phone|default:'' }}" placeholder="Optional">
+                </div>
+                <div class="col-md-6">
+                    <label for="id_institute" class="form-label small fw-semibold">Institute / School name</label>
+                    <input type="text" id="id_institute" name="institute" class="form-control" value="{{ institute|default:'' }}" placeholder="e.g. Sunrise Public School">
+                </div>
+            </div>
+
+            <h6 class="fw-semibold mb-3"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i> Account & security</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="id_email" class="form-label small fw-semibold">Email address</label>
+                    <input type="email" id="id_email" class="form-control" value="{{ user.email|default:'ishwarbachhav2611@gmail.com' }}" disabled aria-describedby="emailLockedHelp">
+                    <div id="emailLockedHelp" class="form-text">
+                        <i class="bi bi-lock-fill me-1" aria-hidden="true"></i>Can't be changed here.
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="id_password_display" class="form-label small fw-semibold">Password</label>
+                    <div class="d-flex gap-2">
+                        <input type="password" id="id_password_display" class="form-control" value="••••••••••" disabled>
+                        <button type="button" class="btn btn-outline-secondary flex-shrink-0" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                            Change
+                        </button>
+                    </div>
+                    <div class="form-text">
+                        <i class="bi bi-lock-fill me-1" aria-hidden="true"></i>Use "Change" to update your password.
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary" id="saveProfileBtn">
+                    <span class="btn-label"><i class="bi bi-check-circle me-1" aria-hidden="true"></i> Save changes</span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>Saving...
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true" aria-labelledby="changePasswordLabel">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none;">
+            <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="action-icon" style="width: 48px; height: 48px; font-size: 1.3rem;" aria-hidden="true">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close change password dialog"></button>
+                </div>
+                <h5 class="fw-bold mb-2" id="changePasswordLabel">Change password</h5>
+                <p class="small text-muted mb-4">Choose a strong password you haven't used before.</p>
+
+                <form id="changePasswordForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_current_password" class="form-label small fw-semibold">Current password</label>
+                        <input type="password" id="id_current_password" name="current_password" class="form-control" required autocomplete="current-password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_new_password" class="form-label small fw-semibold">New password</label>
+                        <input type="password" id="id_new_password" name="new_password" class="form-control" required autocomplete="new-password" aria-describedby="newPasswordHelp">
+                        <div id="newPasswordHelp" class="form-text">At least 8 characters, not entirely numeric.</div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="id_confirm_password" class="form-label small fw-semibold">Confirm new password</label>
+                        <input type="password" id="id_confirm_password" name="confirm_password" class="form-control" required autocomplete="new-password">
+                    </div>
+                    <div id="passwordMismatchError" class="alert alert-danger py-2 small d-none" role="alert">
+                        <i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i> New passwords don't match.
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="changePasswordBtn">
+                        <span class="btn-label"><i class="bi bi-check-circle me-1" aria-hidden="true"></i> Update password</span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>Updating...
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('profileForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!this.checkValidity()) { this.reportValidity(); return; }
+
+    const btn = document.getElementById('saveProfileBtn');
+    btn.querySelector('.btn-label').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    setTimeout(function () {
+        btn.querySelector('.btn-label').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+        btn.disabled = false;
+        showToast('Profile changes will be saved once the backend is connected.', 'primary');
+    }, 800);
+});
+
+document.getElementById('changePasswordForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const mismatchError = document.getElementById('passwordMismatchError');
+    mismatchError.classList.add('d-none');
+
+    if (!this.checkValidity()) { this.reportValidity(); return; }
+
+    const newPass = document.getElementById('id_new_password').value;
+    const confirmPass = document.getElementById('id_confirm_password').value;
+    if (newPass !== confirmPass) {
+        mismatchError.classList.remove('d-none');
+        return;
+    }
+
+    const btn = document.getElementById('changePasswordBtn');
+    btn.querySelector('.btn-label').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    setTimeout(function () {
+        btn.querySelector('.btn-label').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+        btn.disabled = false;
+        bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+        showToast('Password update will be available once the backend is connected.', 'primary');
+    }, 800);
+});
+</script>
+{% endblock %}

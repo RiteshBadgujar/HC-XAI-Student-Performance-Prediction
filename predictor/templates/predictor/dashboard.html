@@ -1,0 +1,119 @@
+{% extends "predictor/base.html" %}
+{% block title %}Dashboard · HC-XAI{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="mb-1">Teacher dashboard</h2>
+    <p class="text-muted small mb-0">Welcome back, {{ user.get_full_name|default:user.username }}</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+            <div class="col">
+                <a href="{% url 'predict_performance' %}" class="action-card text-decoration-none">
+                    <div class="action-icon" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div>
+                        <div class="action-title">Predict performance</div>
+                        <div class="action-sub">Run a new student prediction</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'compare_students' %}" class="action-card text-decoration-none">
+                    <div class="action-icon" aria-hidden="true"><i class="bi bi-arrow-left-right"></i></div>
+                    <div>
+                        <div class="action-title">Compare students</div>
+                        <div class="action-sub">Side-by-side factor comparison</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'student_list' %}" class="action-card text-decoration-none">
+                    <div class="action-icon" aria-hidden="true"><i class="bi bi-people"></i></div>
+                    <div>
+                        <div class="action-title">View all students</div>
+                        <div class="action-sub">Full class records list</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'class_analytics' %}" class="action-card text-decoration-none">
+                    <div class="action-icon" aria-hidden="true"><i class="bi bi-bar-chart"></i></div>
+                    <div>
+                        <div class="action-title">Class analytics</div>
+                        <div class="action-sub">Trends across your batches</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="row row-cols-2 row-cols-md-3 g-3">
+            <div class="col">
+                <div class="stat-card">
+                    <div class="stat-label">Total students</div>
+                    <div class="stat-value">{{ total_predictions|default:"0" }}</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="stat-card">
+                    <div class="stat-label">Avg. score</div>
+                    <div class="stat-value">{{ avg_score|default:"—" }}%</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="stat-card">
+                    <div class="stat-label">Needs attention</div>
+                    <div class="stat-value text-danger">{{ needs_attention_count|default:"0" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="side-panel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="h6 mb-0">Predicted reports</h3>
+                <a href="{% url 'student_list' %}" class="small text-decoration-none">See all</a>
+            </div>
+
+            {% for prediction in recent_predictions %}
+            <div class="doc-row">
+                <a href="{% url 'report_detail' prediction.student_id %}" class="d-flex align-items-center gap-2 min-width-0 text-decoration-none flex-grow-1">
+                    <div class="doc-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></div>
+                    <div class="min-width-0">
+                        <div class="doc-name text-truncate">{{ prediction.student_name }}</div>
+                        <div class="doc-meta">{{ prediction.created_at|date:"d M"|default:"—" }} &middot; {{ prediction.predicted_percentage }}%</div>
+                    </div>
+                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge-category badge-{{ prediction.performance_category|slugify }}">{{ prediction.performance_category }}</span>
+                    <button type="button" class="btn btn-sm p-0 border-0 bg-transparent download-icon-btn" data-student="{{ prediction.student_name }}" aria-label="Download report for {{ prediction.student_name }}">
+                        <i class="bi bi-download text-muted" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="hc-empty-state py-4">
+                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                <p class="mb-3">No predictions yet.</p>
+                <a href="{% url 'predict_performance' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Predict performance
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.download-icon-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const student = this.dataset.student;
+        showToast(`Download for ${student} will be available once the backend is connected.`, 'primary');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "predictor/base.html" %}
+{% block title %}HC-XAI · Human-Centered Explainable AI for Student Performance{% endblock %}
+
+{% block content %}
+<div class="row align-items-center py-4 py-md-5">
+    <div class="col-lg-6 mb-5 mb-lg-0">
+        <span class="badge-category badge-good mb-3 d-inline-block">Explainable AI for Teachers</span>
+        <h1 class="mb-3" style="font-size: 2.4rem; line-height: 1.2;">
+            Predict student performance.<br>Understand <span class="text-primary">why</span>.
+        </h1>
+        <p class="text-muted mb-4" style="font-size: 1.05rem;">
+            HC-XAI uses machine learning to predict how a student will perform —
+            then explains the prediction in plain language, so you know exactly
+            which factors to act on.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'signup' %}" class="btn btn-primary btn-lg px-4">
+                <i class="bi bi-person-plus-fill me-1"></i> Get started free
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg px-4">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Log in
+            </a>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="side-panel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="stat-label mb-0">Sample prediction</span>
+                <span class="badge-category badge-good">Good</span>
+            </div>
+            <div class="display-6 fw-bold text-primary mb-3">78.5%</div>
+            <div class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Attendance</span>
+                    <span class="fw-semibold text-success">+12.4</span>
+                </div>
+                <div class="progress" style="height: 8px; border-radius: 6px;">
+                    <div class="progress-bar bg-success" style="width: 75%; border-radius: 6px;"></div>
+                </div>
+            </div>
+            <div class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Backlogs</span>
+                    <span class="fw-semibold text-danger">-6.1</span>
+                </div>
+                <div class="progress" style="height: 8px; border-radius: 6px;">
+                    <div class="progress-bar bg-danger" style="width: 40%; border-radius: 6px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="my-5">
+
+<div class="text-center mb-5">
+    <h2 class="mb-2">Everything a teacher needs, in one place</h2>
+    <p class="text-muted">From raw marks to actionable, human-readable insight</p>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+    <div class="col">
+        <div class="action-card h-100">
+            <div class="action-icon"><i class="bi bi-cpu"></i></div>
+            <div class="action-title">ML-powered prediction</div>
+            <div class="action-sub">A Random Forest model trained on academic and behavioral data predicts expected performance instantly.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="action-card h-100">
+            <div class="action-icon"><i class="bi bi-lightbulb"></i></div>
+            <div class="action-title">Explainable, not a black box</div>
+            <div class="action-sub">SHAP-based explanations show exactly which factors helped or hurt each prediction — in plain English.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="action-card h-100">
+            <div class="action-icon"><i class="bi bi-file-earmark-pdf"></i></div>
+            <div class="action-title">Auto-generated reports</div>
+            <div class="action-sub">Every prediction can be turned into a downloadable PDF report to share or file for records.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="action-card h-100">
+            <div class="action-icon"><i class="bi bi-arrow-left-right"></i></div>
+            <div class="action-title">Compare students</div>
+            <div class="action-sub">See two students' factors side-by-side to understand what's driving the difference in outcomes.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="action-card h-100">
+            <div class="action-icon"><i class="bi bi-bar-chart"></i></div>
+            <div class="action-title">Class-level analytics</div>
+            <div class="action-sub">Spot trends across your whole class — category distribution, common risk factors, and more.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="action-card h-100">
+            <div class="action-icon"><i class="bi bi-shield-check"></i></div>
+            <div class="action-title">Built for teachers</div>
+            <div class="action-sub">No student pre-registration needed — just enter details and predict, for any student, any time.</div>
+        </div>
+    </div>
+</div>
+
+<div class="side-panel text-center py-5">
+    <h3 class="mb-2">Ready to try it?</h3>
+    <p class="text-muted mb-4">Create your teacher account in under a minute.</p>
+    <a href="{% url 'signup' %}" class="btn btn-primary btn-lg px-5">
+        <i class="bi bi-arrow-right-circle me-1"></i> Sign up now
+    </a>
+</div>
+{% endblock %}
