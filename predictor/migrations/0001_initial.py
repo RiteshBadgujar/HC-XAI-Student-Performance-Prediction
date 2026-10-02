@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
             ("updated_at", models.DateTimeField(auto_now=True)),
             ("student", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="academic_records", to="predictor.student")),
         ], options={"ordering": ["student", "semester"]}),
-        migrations.AddConstraint(model_name="academicrecord", constraint=models.UniqueConstraint(fields=("student", "semester"), name="unique_student_semester")),
+        migrations.AddConstraint(model_name="academicrecord", constraint=models.UniqueConstraint(fields=("student", "semester"), name="predictor_academicrecord_student_semester_uniq")),
         migrations.CreateModel(name="Prediction", fields=[
             ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
             ("predicted_category", models.CharField(choices=[("Excellent", "Excellent"), ("Good", "Good"), ("Average", "Average"), ("Needs Improvement", "Needs Improvement"), ("At Risk", "At Risk")], max_length=50)),

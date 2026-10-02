@@ -42,8 +42,6 @@ staticfiles/
 # ============================================
 .ipynb_checkpoints/
 .pytest_cache/
-
-# Python ML cache
 predictor/ml/__pycache__/
 
 # ============================================
@@ -74,7 +72,6 @@ dist/
 .coverage
 .coverage.*
 htmlcov/
-.pytest_cache/
 
 # ============================================
 # Temporary Files

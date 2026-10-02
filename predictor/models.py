@@ -69,7 +69,7 @@ class AcademicRecord(models.Model):
     class Meta:
         ordering = ["student_id", "semester"]
         constraints = [
-            models.UniqueConstraint(fields=["student", "semester"], name="unique_student_semester")
+            models.UniqueConstraint(fields=["student", "semester"], name="predictor_academicrecord_student_semester_uniq")
         ]
 
     @property
