@@ -1,0 +1,8 @@
+Django==6.1
+psycopg[binary]>=3.2,<4
+pandas>=2.2,<3
+openpyxl>=3.1,<4
+scikit-learn>=1.5,<2
+joblib>=1.4,<2
+shap>=0.46,<1
+reportlab>=4.2,<5
