@@ -79,9 +79,9 @@
                         <a href="{% url 'report_detail' prediction.student_id %}" class="small text-decoration-none me-3">
                             <i class="bi bi-eye me-1" aria-hidden="true"></i>View
                         </a>
-                        <button type="button" class="btn btn-link btn-sm p-0 small text-muted text-decoration-none download-row-btn" data-student="{{ prediction.student_name }}">
+                        <a href="{% url 'report_pdf' prediction.student_id %}" class="btn btn-link btn-sm p-0 small text-muted text-decoration-none">
                             <i class="bi bi-download me-1" aria-hidden="true"></i>Download
-                        </button>
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -157,12 +157,7 @@
     categoryFilter.addEventListener('change', applyFilters);
     sortSelect.addEventListener('change', applySort);
 
-    document.querySelectorAll('.download-row-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            const student = this.dataset.student;
-            showToast(`Download for ${student} will be available once the backend is connected.`, 'primary');
-        });
-    });
+
 })();
 </script>
 {% endblock %}

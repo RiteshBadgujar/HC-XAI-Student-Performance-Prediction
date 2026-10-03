@@ -12,364 +12,304 @@
 {% block content %}
 <div class="mb-4">
     <h2 class="mb-1">Compare students</h2>
-    <p class="text-muted small mb-0">Search existing records, or upload a file to compare new data</p>
+    <p class="text-muted small mb-0">Search existing records to compare side by side</p>
 </div>
 
+<!-- Input Row -->
 <div class="row g-3 mb-3">
     <div class="col-md-5">
         <div class="side-panel">
-            <label class="form-label small fw-semibold mb-2" id="labelA"><i class="bi bi-person me-1" aria-hidden="true"></i> Student A</label>
-            <ul class="nav nav-pills nav-sm mb-3" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active py-1 px-2 small" data-bs-toggle="pill" data-bs-target="#a-search" type="button">Search</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link py-1 px-2 small" data-bs-toggle="pill" data-bs-target="#a-upload" type="button">Upload</button>
-                </li>
-            </ul>
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="a-search">
-                    <input type="text" class="form-control compare-input" data-target="A" placeholder="Try: ST001, ST002, ST003, ST004" list="studentOptions" autocomplete="off" aria-labelledby="labelA">
-                </div>
-                <div class="tab-pane fade" id="a-upload">
-                    <input type="file" class="form-control compare-upload" data-target="A" accept=".csv" aria-label="Upload CSV for Student A">
-                    <p class="text-muted small mt-2 mb-0">Accepts .csv only</p>
-                </div>
-            </div>
+            <label class="form-label small fw-semibold mb-2" id="labelA"><i class="bi bi-person me-1"></i> Student A</label>
+            <input type="text" class="form-control compare-input" data-target="A"
+                placeholder="Enter Student ID" list="studentOptions" autocomplete="off" aria-labelledby="labelA">
         </div>
     </div>
-
     <div class="col-md-2 d-flex align-items-center justify-content-center">
-        <div class="action-icon" style="width: 44px; height: 44px;" aria-hidden="true">
-            <i class="bi bi-arrow-left-right"></i>
-        </div>
+        <div class="action-icon" style="width:44px;height:44px;" aria-hidden="true"><i class="bi bi-arrow-left-right"></i></div>
     </div>
-
     <div class="col-md-5">
         <div class="side-panel">
-            <label class="form-label small fw-semibold mb-2" id="labelB"><i class="bi bi-person me-1" aria-hidden="true"></i> Student B</label>
-            <ul class="nav nav-pills nav-sm mb-3" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active py-1 px-2 small" data-bs-toggle="pill" data-bs-target="#b-search" type="button">Search</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link py-1 px-2 small" data-bs-toggle="pill" data-bs-target="#b-upload" type="button">Upload</button>
-                </li>
-            </ul>
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="b-search">
-                    <input type="text" class="form-control compare-input" data-target="B" placeholder="Try: ST001, ST002, ST003, ST004" list="studentOptions" autocomplete="off" aria-labelledby="labelB">
-                </div>
-                <div class="tab-pane fade" id="b-upload">
-                    <input type="file" class="form-control compare-upload" data-target="B" accept=".csv" aria-label="Upload CSV for Student B">
-                    <p class="text-muted small mt-2 mb-0">Accepts .csv only</p>
-                </div>
-            </div>
+            <label class="form-label small fw-semibold mb-2" id="labelB"><i class="bi bi-person me-1"></i> Student B</label>
+            <input type="text" class="form-control compare-input" data-target="B"
+                placeholder="Enter Student ID" list="studentOptions" autocomplete="off" aria-labelledby="labelB">
         </div>
     </div>
 </div>
 
+<!-- Datalist: populated from Django context (Student.objects.order_by) -->
 <datalist id="studentOptions">
-    <option value="ST001">
-    <option value="ST002">
-    <option value="ST003">
-    <option value="ST004">
+    {% for student in students %}
+    <option value="{{ student.student_id }}">{{ student.full_name }}</option>
+    {% endfor %}
 </datalist>
 
 <div class="text-center mb-4">
     <button class="btn btn-primary px-4" id="compareBtn">
-        <span class="btn-label"><i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i> Compare</span>
-        <span class="btn-loading d-none">
-            <span class="spinner-border spinner-border-sm me-2" role="status"></span>Comparing...
-        </span>
+        <span class="btn-label"><i class="bi bi-arrow-left-right me-1"></i> Compare</span>
+        <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>Comparing...</span>
     </button>
     <div id="compareError" class="text-danger small mt-2 d-none" role="alert">
-        <i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>
-        <span id="compareErrorText">Enter valid IDs for both students.</span>
+        <i class="bi bi-exclamation-circle me-1"></i><span id="compareErrorText"></span>
     </div>
 </div>
 
+<!-- Result -->
 <div id="comparisonResult" class="d-none" aria-live="polite">
 
+    <!-- Score Cards -->
     <div class="row g-4 mb-4">
         <div class="col-md-6">
-            <div class="side-panel h-100" id="cardA">
+            <div class="side-panel h-100">
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="avatar-badge" style="width: 52px; height: 52px; font-size: 16px;" id="avatarA" aria-hidden="true">—</div>
+                    <div class="avatar-badge" style="width:52px;height:52px;font-size:16px;" id="avatarA">—</div>
                     <div class="flex-grow-1">
                         <h6 class="fw-semibold mb-0" id="nameA">—</h6>
                         <div class="text-muted small" id="metaA">—</div>
                     </div>
                     <span class="badge-category" id="categoryA">—</span>
                 </div>
-                <div class="text-center py-3 mb-3" style="background: var(--hc-surface); border-radius: 10px;">
+                <div class="text-center py-3 mb-3" style="background:var(--hc-surface);border-radius:10px;">
                     <div class="stat-label mb-1">Predicted score</div>
-                    <div class="display-6 fw-bold text-primary" id="scoreA">—%</div>
+                    <div class="display-6 fw-bold text-primary" id="scoreA">—</div>
                 </div>
                 <div id="statsA"></div>
             </div>
         </div>
-
         <div class="col-md-6">
-            <div class="side-panel h-100" id="cardB">
+            <div class="side-panel h-100">
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="avatar-badge" style="width: 52px; height: 52px; font-size: 16px;" id="avatarB" aria-hidden="true">—</div>
+                    <div class="avatar-badge" style="width:52px;height:52px;font-size:16px;" id="avatarB">—</div>
                     <div class="flex-grow-1">
                         <h6 class="fw-semibold mb-0" id="nameB">—</h6>
                         <div class="text-muted small" id="metaB">—</div>
                     </div>
                     <span class="badge-category" id="categoryB">—</span>
                 </div>
-                <div class="text-center py-3 mb-3" style="background: var(--hc-surface); border-radius: 10px;">
+                <div class="text-center py-3 mb-3" style="background:var(--hc-surface);border-radius:10px;">
                     <div class="stat-label mb-1">Predicted score</div>
-                    <div class="display-6 fw-bold text-primary" id="scoreB">—%</div>
+                    <div class="display-6 fw-bold text-primary" id="scoreB">—</div>
                 </div>
                 <div id="statsB"></div>
             </div>
         </div>
     </div>
 
+    <!-- D3 Grouped Bar Chart -->
     <div class="side-panel mb-4">
-        <h6 class="fw-semibold mb-3"><i class="bi bi-bar-chart-line me-1" aria-hidden="true"></i> Factor-by-factor comparison</h6>
-        <div id="factorComparisonTable"></div>
+        <h6 class="fw-semibold mb-3"><i class="bi bi-bar-chart-line me-1"></i> Factor-by-factor comparison</h6>
+        <div class="d-flex gap-4 small mb-3">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#4f46e5;border-radius:2px;margin-right:4px;"></span><span id="legendNameA">Student A</span></span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:2px;margin-right:4px;"></span><span id="legendNameB">Student B</span></span>
+        </div>
+        <div id="compare-bar-chart"></div>
     </div>
 
+    <!-- D3 Radar Overlay -->
     <div class="side-panel mb-4">
-        <h6 class="fw-semibold mb-3"><i class="bi bi-lightbulb me-1" aria-hidden="true"></i> Key insights</h6>
+        <h6 class="fw-semibold mb-3"><i class="bi bi-diagram-3 me-1"></i> Profile radar overlay</h6>
+        <div class="d-flex gap-4 small mb-3">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#4f46e5;border-radius:2px;margin-right:4px;opacity:0.7;"></span><span id="radarNameA">Student A</span></span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:2px;margin-right:4px;opacity:0.7;"></span><span id="radarNameB">Student B</span></span>
+        </div>
+        <div id="compare-radar-chart" class="d-flex justify-content-center"></div>
+    </div>
+
+    <!-- Key Insights -->
+    <div class="side-panel mb-4">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-lightbulb me-1"></i> Key insights</h6>
         <div id="keyInsights"></div>
     </div>
 
-    <div class="side-panel mb-4" style="background: var(--hc-accent-soft); border: none;">
+    <div class="side-panel mb-4" style="background:var(--hc-accent-soft);border:none;">
         <div class="d-flex gap-3">
-            <div class="action-icon flex-shrink-0" style="background: #fff;" aria-hidden="true"><i class="bi bi-clipboard-check"></i></div>
+            <div class="action-icon flex-shrink-0" style="background:#fff;"><i class="bi bi-clipboard-check"></i></div>
             <div>
                 <h6 class="fw-semibold mb-2">Conclusion</h6>
                 <p class="small mb-0" id="conclusionText">—</p>
             </div>
         </div>
     </div>
-
-    <div class="text-center">
-        <button class="btn btn-outline-secondary px-4" id="downloadReportBtn">
-            <span class="btn-label"><i class="bi bi-download me-1" aria-hidden="true"></i> Download comparison report</span>
-            <span class="btn-loading d-none">
-                <span class="spinner-border spinner-border-sm me-2" role="status"></span>Preparing...
-            </span>
-        </button>
-    </div>
 </div>
 
 <div class="hc-empty-state" id="compareEmptyState">
     <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
-    <p class="mb-0">Enter a student ID on both sides, then click <strong>Compare</strong> to see them side by side.</p>
+    <p class="mb-0">Enter a student ID on both sides, then click <strong>Compare</strong>.</p>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
-const STUDENT_DATA = {
-    "ST001": { name: "Rahul Verma", classYear: "TE-B", score: 82, category: "Good",
-        factors: [
-            {name: "Attendance", icon: "bi-calendar-check", value: 78, unit: "%"},
-            {name: "Previous marks", icon: "bi-journal-text", value: 80, unit: "%"},
-            {name: "Assignment completion", icon: "bi-clipboard-data", value: 85, unit: "%"},
-            {name: "Study hours/week", icon: "bi-clock-history", value: 12, unit: "hrs"},
-            {name: "Participation", icon: "bi-hand-thumbs-up", value: 7, unit: "/10"},
-            {name: "Backlogs", icon: "bi-exclamation-triangle", value: 1, unit: "", lowerIsBetter: true},
-        ] },
-    "ST002": { name: "Priya Nair", classYear: "TE-A", score: 91, category: "Excellent",
-        factors: [
-            {name: "Attendance", icon: "bi-calendar-check", value: 95, unit: "%"},
-            {name: "Previous marks", icon: "bi-journal-text", value: 93, unit: "%"},
-            {name: "Assignment completion", icon: "bi-clipboard-data", value: 97, unit: "%"},
-            {name: "Study hours/week", icon: "bi-clock-history", value: 18, unit: "hrs"},
-            {name: "Participation", icon: "bi-hand-thumbs-up", value: 9, unit: "/10"},
-            {name: "Backlogs", icon: "bi-exclamation-triangle", value: 0, unit: "", lowerIsBetter: true},
-        ] },
-    "ST003": { name: "Amit Joshi", classYear: "TE-B", score: 56, category: "Average",
-        factors: [
-            {name: "Attendance", icon: "bi-calendar-check", value: 60, unit: "%"},
-            {name: "Previous marks", icon: "bi-journal-text", value: 58, unit: "%"},
-            {name: "Assignment completion", icon: "bi-clipboard-data", value: 62, unit: "%"},
-            {name: "Study hours/week", icon: "bi-clock-history", value: 6, unit: "hrs"},
-            {name: "Participation", icon: "bi-hand-thumbs-up", value: 5, unit: "/10"},
-            {name: "Backlogs", icon: "bi-exclamation-triangle", value: 3, unit: "", lowerIsBetter: true},
-        ] },
-    "ST004": { name: "Sneha Patil", classYear: "TE-C", score: 39, category: "Needs Attention",
-        factors: [
-            {name: "Attendance", icon: "bi-calendar-check", value: 45, unit: "%"},
-            {name: "Previous marks", icon: "bi-journal-text", value: 40, unit: "%"},
-            {name: "Assignment completion", icon: "bi-clipboard-data", value: 38, unit: "%"},
-            {name: "Study hours/week", icon: "bi-clock-history", value: 3, unit: "hrs"},
-            {name: "Participation", icon: "bi-hand-thumbs-up", value: 3, unit: "/10"},
-            {name: "Backlogs", icon: "bi-exclamation-triangle", value: 5, unit: "", lowerIsBetter: true},
-        ] },
-};
+// ── compare_students_api returns: {students: [{student_id, student_name,
+//    class_year, category, score, attendance, previous_percent,
+//    study_hours, backlogs}, ...]}  ─────────────────────────────────────────
 
-function slugifyCategory(cat) { return cat.toLowerCase().replace(/\s+/g, '-'); }
-function initials(name) { return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(); }
+function initials(name) { return (name || "?").split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(); }
+function slugify(s) { return (s || "").toLowerCase().replace(/\s+/g, '-'); }
 
-function renderCard(target, data) {
-    document.getElementById('avatar' + target).textContent = initials(data.name);
-    document.getElementById('name' + target).textContent = data.name;
-    document.getElementById('meta' + target).textContent = data.classYear;
-    document.getElementById('score' + target).textContent = data.score + '%';
-    const badge = document.getElementById('category' + target);
-    badge.textContent = data.category;
-    badge.className = 'badge-category badge-' + slugifyCategory(data.category);
+const FACTORS = [
+    { key: "attendance",      label: "Attendance (%)",  max: 100 },
+    { key: "previous_percent",label: "Prev. Marks (%)", max: 100 },
+    { key: "study_hours",     label: "Study Hours",     max: 20  },
+    { key: "backlogs",        label: "Backlogs",        max: 10, lowerBetter: true },
+];
 
-    const statsEl = document.getElementById('stats' + target);
-    statsEl.innerHTML = data.factors.map(f => `
-        <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
-            <div class="d-flex align-items-center gap-2">
-                <div class="doc-icon" aria-hidden="true"><i class="bi ${f.icon}"></i></div>
-                <span class="small">${f.name}</span>
-            </div>
-            <span class="fw-semibold small">${f.value}${f.unit}</span>
-        </div>
-    `).join('');
+function renderCard(t, d) {
+    document.getElementById('avatar' + t).textContent = initials(d.student_name);
+    document.getElementById('name' + t).textContent = d.student_name;
+    document.getElementById('meta' + t).textContent = d.class_year || '—';
+    document.getElementById('score' + t).textContent = d.score != null ? d.score + '%' : '—';
+    const badge = document.getElementById('category' + t);
+    badge.textContent = d.category || '—';
+    badge.className = 'badge-category badge-' + slugify(d.category);
+    document.getElementById('stats' + t).innerHTML = FACTORS.map(f => `
+        <div class="d-flex justify-content-between py-2 border-bottom small">
+            <span>${f.label}</span>
+            <span class="fw-semibold">${d[f.key] ?? '—'}</span>
+        </div>`).join('');
 }
 
-function renderFactorTable(dataA, dataB) {
-    const container = document.getElementById('factorComparisonTable');
-    container.innerHTML = dataA.factors.map((factorA, i) => {
-        const factorB = dataB.factors[i];
-        const lowerIsBetter = !!factorA.lowerIsBetter;
-        const aWins = lowerIsBetter ? factorA.value < factorB.value : factorA.value > factorB.value;
-        const bWins = lowerIsBetter ? factorB.value < factorA.value : factorB.value > factorA.value;
-        return `
-        <div class="d-flex align-items-center py-2 border-bottom">
-            <div class="d-flex align-items-center gap-2" style="width: 40%;">
-                <div class="doc-icon" aria-hidden="true"><i class="bi ${factorA.icon}"></i></div>
-                <span class="small fw-semibold">${factorA.name}</span>
-            </div>
-            <div class="text-center flex-fill">
-                <span class="fw-semibold ${aWins ? 'text-success' : ''}">${factorA.value}${factorA.unit}</span>
-                ${aWins ? '<i class="bi bi-check-circle-fill text-success ms-1 small" aria-hidden="true"></i>' : ''}
-            </div>
-            <div class="text-muted small" style="width: 10%; text-align:center;">vs</div>
-            <div class="text-center flex-fill">
-                <span class="fw-semibold ${bWins ? 'text-success' : ''}">${factorB.value}${factorB.unit}</span>
-                ${bWins ? '<i class="bi bi-check-circle-fill text-success ms-1 small" aria-hidden="true"></i>' : ''}
-            </div>
-        </div>`;
-    }).join('');
+function drawGroupedBar(dA, dB) {
+    d3.select("#compare-bar-chart svg").remove();
+    const keys = FACTORS.filter(f => !f.lowerBetter);
+    const labels = keys.map(f => f.label);
+    const margin = { top: 10, right: 20, bottom: 40, left: 55 };
+    const totalW = document.getElementById("compare-bar-chart").clientWidth || 500;
+    const chartH = 200;
+    const width = totalW - margin.left - margin.right;
+
+    const svg = d3.select("#compare-bar-chart").append("svg")
+        .attr("width", totalW).attr("height", chartH + margin.top + margin.bottom);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const x0 = d3.scaleBand().domain(labels).range([0, width]).padding(0.25);
+    const x1 = d3.scaleBand().domain(["A", "B"]).range([0, x0.bandwidth()]).padding(0.08);
+    const y  = d3.scaleLinear().domain([0, 100]).range([chartH, 0]);
+
+    g.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d => d + "%"))
+        .selectAll("text").attr("font-size", "11px");
+    g.append("g").attr("transform", `translate(0,${chartH})`).call(d3.axisBottom(x0))
+        .selectAll("text").attr("font-size", "11px");
+
+    const colors = { A: "#4f46e5", B: "#f59e0b" };
+    keys.forEach((f, i) => {
+        ["A", "B"].forEach(t => {
+            const val = t === "A" ? (dA[f.key] || 0) : (dB[f.key] || 0);
+            g.append("rect")
+                .attr("x", x0(labels[i]) + x1(t)).attr("y", chartH)
+                .attr("width", x1.bandwidth()).attr("rx", 4)
+                .attr("fill", colors[t]).attr("opacity", 0.82).attr("height", 0)
+                .transition().duration(700).ease(d3.easeCubicOut).delay(i * 80)
+                .attr("y", y(val)).attr("height", chartH - y(val));
+        });
+    });
 }
 
-function renderKeyInsights(dataA, dataB) {
-    const insights = [];
-    const scoreDiff = Math.abs(dataA.score - dataB.score);
-    const leader = dataA.score >= dataB.score ? dataA : dataB;
-    const trailer = dataA.score >= dataB.score ? dataB : dataA;
+function drawRadar(dA, dB) {
+    d3.select("#compare-radar-chart svg").remove();
+    const axes = FACTORS.filter(f => !f.lowerBetter);
+    const size = 240, cx = size / 2, cy = size / 2, r = 90;
+    const n = axes.length, step = (2 * Math.PI) / n;
+    const svg = d3.select("#compare-radar-chart").append("svg")
+        .attr("width", size).attr("height", size).style("overflow", "visible");
 
-    insights.push({ icon: 'bi-graph-up-arrow', text: `${leader.name} scores ${scoreDiff} points higher overall than ${trailer.name}.` });
+    [0.25, 0.5, 0.75, 1].forEach(t =>
+        svg.append("circle").attr("cx", cx).attr("cy", cy).attr("r", r * t)
+            .attr("fill", "none").attr("stroke", "#e2e8f0").attr("stroke-width", 1));
 
-    dataA.factors.forEach((fA, i) => {
-        const fB = dataB.factors[i];
-        const diff = Math.abs(fA.value - fB.value);
-        const lowerIsBetter = !!fA.lowerIsBetter;
-        const aBetter = lowerIsBetter ? fA.value < fB.value : fA.value > fB.value;
-        if (diff === 0) return;
-        const ahead = aBetter ? dataA.name : dataB.name;
-        if (fA.name === 'Backlogs' && diff > 0) {
-            insights.push({ icon: 'bi-exclamation-triangle', text: `${ahead} has fewer pending backlogs, reducing academic risk.` });
-        } else if (diff >= 15 || (fA.name === 'Study hours/week' && diff >= 5)) {
-            insights.push({ icon: 'bi-star', text: `Biggest gap: ${fA.name} — ${ahead} leads by ${diff}${fA.unit}.` });
-        }
+    axes.forEach((f, i) => {
+        const angle = step * i - Math.PI / 2;
+        svg.append("line").attr("x1", cx).attr("y1", cy)
+            .attr("x2", cx + r * Math.cos(angle)).attr("y2", cy + r * Math.sin(angle))
+            .attr("stroke", "#cbd5e1").attr("stroke-width", 1);
+        svg.append("text").attr("x", cx + (r + 18) * Math.cos(angle)).attr("y", cy + (r + 18) * Math.sin(angle))
+            .attr("dy", "0.35em").attr("text-anchor", "middle").attr("font-size", "10px").attr("fill", "#64748b")
+            .text(f.label.replace(" (%)", ""));
     });
 
-    document.getElementById('keyInsights').innerHTML = insights.map(i => `
-        <div class="d-flex align-items-start gap-2 mb-2">
-            <i class="bi ${i.icon} text-primary mt-1" aria-hidden="true"></i>
-            <span class="small">${i.text}</span>
-        </div>
-    `).join('');
-}
-
-function renderConclusion(dataA, dataB) {
-    const leader = dataA.score >= dataB.score ? dataA : dataB;
-    const trailer = dataA.score >= dataB.score ? dataB : dataA;
-    const diff = Math.abs(dataA.score - dataB.score);
-
-    let recommendation;
-    if (trailer.category === 'Needs Attention' || trailer.category === 'Average') {
-        recommendation = `Consider prioritizing intervention for ${trailer.name} — improving attendance and reducing backlogs would likely close much of this gap.`;
-    } else {
-        recommendation = `Both students are performing reasonably well; the gap is modest and likely reflects normal variation rather than a cause for concern.`;
+    function polygon(data, color) {
+        const pts = axes.map((f, i) => {
+            const angle = step * i - Math.PI / 2;
+            const val = Math.min((data[f.key] || 0) / f.max, 1);
+            return [cx + r * val * Math.cos(angle), cy + r * val * Math.sin(angle)];
+        });
+        svg.append("polygon").attr("points", pts.map(p => p.join(",")).join(" "))
+            .attr("fill", color).attr("fill-opacity", 0.18).attr("stroke", color).attr("stroke-width", 2);
+        pts.forEach(([px, py]) =>
+            svg.append("circle").attr("cx", px).attr("cy", py).attr("r", 4)
+                .attr("fill", color).attr("stroke", "white").attr("stroke-width", 2));
     }
 
-    document.getElementById('conclusionText').textContent =
-        `${leader.name} is predicted to outperform ${trailer.name} by ${diff} percentage points, primarily driven by differences in attendance and study consistency. ${recommendation}`;
+    polygon(dA, "#4f46e5");
+    polygon(dB, "#f59e0b");
 }
 
-const compareBtn = document.getElementById('compareBtn');
-const errorBox = document.getElementById('compareError');
-const errorText = document.getElementById('compareErrorText');
-const resultEl = document.getElementById('comparisonResult');
-const emptyEl = document.getElementById('compareEmptyState');
-
-function setLoading(isLoading) {
-    compareBtn.querySelector('.btn-label').classList.toggle('d-none', isLoading);
-    compareBtn.querySelector('.btn-loading').classList.toggle('d-none', !isLoading);
-    compareBtn.disabled = isLoading;
+function renderInsights(dA, dB) {
+    const insights = [];
+    const diff = Math.abs((dA.score || 0) - (dB.score || 0));
+    const leader  = (dA.score || 0) >= (dB.score || 0) ? dA : dB;
+    const trailer = leader === dA ? dB : dA;
+    if (diff > 0) insights.push({ icon: "bi-graph-up-arrow", text: `${leader.student_name} scores ${diff.toFixed(1)} points higher overall.` });
+    if ((dA.attendance || 0) !== (dB.attendance || 0)) {
+        const ahead = (dA.attendance || 0) > (dB.attendance || 0) ? dA : dB;
+        insights.push({ icon: "bi-calendar-check", text: `${ahead.student_name} has better attendance (${ahead.attendance}%).` });
+    }
+    if ((dA.backlogs || 0) !== (dB.backlogs || 0)) {
+        const better = (dA.backlogs || 0) < (dB.backlogs || 0) ? dA : dB;
+        insights.push({ icon: "bi-exclamation-triangle", text: `${better.student_name} has fewer backlogs (${better.backlogs}).` });
+    }
+    if ((dA.study_hours || 0) !== (dB.study_hours || 0)) {
+        const harder = (dA.study_hours || 0) > (dB.study_hours || 0) ? dA : dB;
+        insights.push({ icon: "bi-clock-history", text: `${harder.student_name} studies more hours per week (${harder.study_hours} hrs).` });
+    }
+    document.getElementById("keyInsights").innerHTML = insights.length
+        ? insights.map(i => `<div class="d-flex align-items-start gap-2 mb-2"><i class="bi ${i.icon} text-primary mt-1"></i><span class="small">${i.text}</span></div>`).join('')
+        : '<p class="text-muted small">No significant differences found.</p>';
+    document.getElementById("conclusionText").textContent = diff > 0
+        ? `${leader.student_name} is predicted to outperform ${trailer.student_name} by ${diff.toFixed(1)} percentage points. Focus intervention on ${trailer.student_name}'s weakest areas.`
+        : `Both students have similar predicted performance. Continue monitoring both equally.`;
 }
 
-function showError(message) {
-    errorText.textContent = message;
-    errorBox.classList.remove('d-none');
-    resultEl.classList.add('d-none');
-    emptyEl.classList.remove('d-none');
-}
-
-function hideError() { errorBox.classList.add('d-none'); }
-
-compareBtn.addEventListener('click', function () {
-    hideError();
+document.getElementById("compareBtn").addEventListener("click", async function () {
+    const btn = this;
     const idA = document.querySelector('.compare-input[data-target="A"]').value.trim().toUpperCase();
     const idB = document.querySelector('.compare-input[data-target="B"]').value.trim().toUpperCase();
+    const errBox = document.getElementById("compareError");
+    const errText = document.getElementById("compareErrorText");
+    errBox.classList.add("d-none");
 
-    if (!idA || !idB) { showError('Please enter a student ID on both sides.'); return; }
+    if (!idA || !idB) { errText.textContent = "Please enter both student IDs."; errBox.classList.remove("d-none"); return; }
 
-    const dataA = STUDENT_DATA[idA];
-    const dataB = STUDENT_DATA[idB];
-
-    if (!dataA || !dataB) {
-        showError(`No record found for ${!dataA ? idA : idB}. Try ST001–ST004 for this demo.`);
-        return;
-    }
-
-    setLoading(true);
-    setTimeout(function () {
-        renderCard('A', dataA);
-        renderCard('B', dataB);
-        renderFactorTable(dataA, dataB);
-        renderKeyInsights(dataA, dataB);
-        renderConclusion(dataA, dataB);
-        resultEl.classList.remove('d-none');
-        emptyEl.classList.add('d-none');
-        setLoading(false);
-    }, 600);
-});
-
-document.getElementById('downloadReportBtn').addEventListener('click', function () {
-    const btn = this;
     btn.querySelector('.btn-label').classList.add('d-none');
     btn.querySelector('.btn-loading').classList.remove('d-none');
     btn.disabled = true;
 
-    setTimeout(function () {
+    try {
+        // Calls compare_students_api view at /api/compare/?a=...&b=...
+        const res = await fetch(`/api/compare/?a=${idA}&b=${idB}`);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Error fetching data");
+
+        const dA = json.students[0], dB = json.students[1];
+
+        renderCard("A", dA); renderCard("B", dB);
+        drawGroupedBar(dA, dB);
+        drawRadar(dA, dB);
+        renderInsights(dA, dB);
+
+        document.getElementById("legendNameA").textContent = dA.student_name;
+        document.getElementById("legendNameB").textContent = dB.student_name;
+        document.getElementById("radarNameA").textContent  = dA.student_name;
+        document.getElementById("radarNameB").textContent  = dB.student_name;
+        document.getElementById("comparisonResult").classList.remove("d-none");
+        document.getElementById("compareEmptyState").classList.add("d-none");
+
+    } catch(e) {
+        errText.textContent = e.message;
+        errBox.classList.remove("d-none");
+    } finally {
         btn.querySelector('.btn-label').classList.remove('d-none');
         btn.querySelector('.btn-loading').classList.add('d-none');
         btn.disabled = false;
-        showToast('PDF export will be available once the backend is connected.', 'primary');
-    }, 800);
-});
-
-// Upload tabs: acknowledge file selection since actual parsing isn't wired up yet
-document.querySelectorAll('.compare-upload').forEach(function (input) {
-    input.addEventListener('change', function () {
-        if (this.files.length > 0) {
-            showToast(`"${this.files[0].name}" selected. CSV parsing will be available once the backend is connected.`, 'primary');
-        }
-    });
+    }
 });
 </script>
 {% endblock %}

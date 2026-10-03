@@ -1,450 +1,225 @@
 {% extends "predictor/base.html" %}
-
-{% block title %}
-{{ student_name|default:"Rahul Verma" }} · Report · HC-XAI
-{% endblock %}
+{% block title %}{{ student_name }} · Report · HC-XAI{% endblock %}
 
 {% block breadcrumb %}
 <div class="hc-breadcrumb">
-
-    <a href="{% url 'dashboard' %}">
-        Dashboard
-    </a>
-
+    <a href="{% url 'dashboard' %}">Dashboard</a>
     <span class="sep">/</span>
-
-    <a href="{% url 'student_list' %}">
-        All students
-    </a>
-
+    <a href="{% url 'student_list' %}">Students</a>
     <span class="sep">/</span>
-
-    <span class="current">
-        {{ student_name|default:"Rahul Verma" }}
-    </span>
-
+    <span class="current">{{ student_name }}</span>
 </div>
 {% endblock %}
 
-
 {% block content %}
+{% with record=prediction.academic_record %}
 
-<!-- =========================
-     REPORT HEADER
-========================= -->
-
-<div class="mb-4">
-
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-
-        <div>
-
-            <h2 class="mb-1">
-                {{ student_name|default:"Rahul Verma" }}
-            </h2>
-
-            <p class="text-muted small mb-0">
-
-                {{ student_id|default:"ST001" }}
-
-                &middot;
-
-                {{ class_year|default:"TE-B" }}
-
-                &middot;
-
-                Predicted on
-                {{ created_at|default:"28 Aug 2026" }}
-
-            </p>
-
-        </div>
-
-
-        <!-- =========================
-             DOWNLOAD PDF BUTTON
-        ========================== -->
-
-        <button
-            type="button"
-            class="btn btn-primary no-print"
-            id="downloadReportBtn"
-        >
-
-            <span class="btn-label">
-
-                <i
-                    class="bi bi-download me-1"
-                    aria-hidden="true"
-                ></i>
-
-                Download PDF
-
-            </span>
-
-
-            <span class="btn-loading d-none">
-
-                <span
-                    class="spinner-border spinner-border-sm me-2"
-                    role="status"
-                    aria-hidden="true"
-                ></span>
-
-                Preparing...
-
-            </span>
-
-        </button>
-
+<!-- Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="mb-1">{{ student_name }}</h2>
+        <p class="text-muted small mb-0">
+            ID {{ student_id }}{% if class_year %} · {{ class_year }}{% endif %}
+        </p>
     </div>
-
+    <a href="{% url 'report_pdf' student_id %}" class="btn btn-outline-primary">
+        <i class="bi bi-download me-1" aria-hidden="true"></i> Download PDF
+    </a>
 </div>
 
-
-
-<!-- =========================
-     REPORT CONTENT
-========================= -->
-
-<div class="row g-4">
-
-
-    <!-- =========================
-         PERFORMANCE
-    ========================== -->
-
-    <div class="col-lg-4">
-
-        <div class="side-panel text-center">
-
-            <div class="stat-label mb-2">
-                Predicted performance
-            </div>
-
-
-            <div class="display-5 fw-bold text-primary mb-1">
-
-                {{ predicted_percentage|default:"82" }}%
-
-            </div>
-
-
-            <span
-                class="badge-category badge-{{ performance_category|default:"good"|slugify }} fs-6 px-3 py-2"
-            >
-
-                {{ performance_category|default:"Good" }}
-
-            </span>
-
+<!-- Prediction summary -->
+<div class="side-panel mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-md-3 col-6">
+            <div class="stat-label">Predicted performance</div>
+            <div class="stat-value">{{ predicted_percentage|floatformat:2 }}%</div>
         </div>
-
+        <div class="col-md-3 col-6">
+            <div class="stat-label">Category</div>
+            <span class="badge fs-6
+                {% if performance_category == 'Excellent' %}bg-success
+                {% elif performance_category == 'Good' %}bg-info text-dark
+                {% elif performance_category == 'Average' %}bg-warning text-dark
+                {% elif performance_category == 'Needs Improvement' %}bg-orange text-dark
+                {% else %}bg-danger{% endif %}">{{ performance_category }}</span>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-label">Risk</div>
+            <span class="badge fs-6
+                {% if risk_level == 'Low' %}bg-success
+                {% elif risk_level == 'Medium' %}bg-warning text-dark
+                {% else %}bg-danger{% endif %}">{{ risk_level }}</span>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-label">Confidence</div>
+            <div class="stat-value">{{ confidence|floatformat:1 }}%</div>
+        </div>
     </div>
 
+    <hr>
+    <div class="small">
+        <strong>Why this prediction?</strong>
+        <span class="text-muted">
+            {% firstof prediction.explanation_summary prediction.shap_explanation.summary "No explanation summary was generated for this prediction." %}
+        </span>
+    </div>
+</div>
 
-
-    <!-- =========================
-         SHAP FACTOR IMPACT
-    ========================== -->
-
-    <div class="col-lg-8">
-
-        <div class="side-panel mb-4">
-
+<!-- Snapshot + SHAP impact -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="side-panel h-100">
             <h6 class="fw-semibold mb-3">
-
-                <i
-                    class="bi bi-bar-chart-line me-1"
-                    aria-hidden="true"
-                ></i>
-
-                Factor impact (SHAP)
-
+                <i class="bi bi-person-lines-fill me-1" aria-hidden="true"></i> Student snapshot
             </h6>
-
-
-            {% for factor in factors %}
-
-            <div class="mb-3">
-
-                <div class="d-flex justify-content-between small mb-1">
-
-                    <span>
-                        {{ factor.name }}
-                    </span>
-
-
-                    <span
-                        class="fw-semibold
-                        {% if factor.impact > 0 %}
-                            text-success
-                        {% else %}
-                            text-danger
-                        {% endif %}"
-                    >
-
-                        {% if factor.impact > 0 %}
-                            +
-                        {% endif %}
-
-                        {{ factor.impact }}
-
-                    </span>
-
-                </div>
-
-
-                <div
-                    class="progress"
-                    style="height: 8px; border-radius: 6px;"
-                    role="progressbar"
-                    aria-valuenow="{{ factor.bar_width }}"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                >
-
-                    <div
-                        class="progress-bar
-                        {% if factor.impact > 0 %}
-                            bg-success
-                        {% else %}
-                            bg-danger
-                        {% endif %}"
-                        style="
-                            width: {{ factor.bar_width }}%;
-                            border-radius: 6px;
-                        "
-                    ></div>
-
-                </div>
-
-            </div>
-
-
-            {% empty %}
-
-            <p class="text-muted small mb-0">
-
-                No factor data available.
-
-            </p>
-
-            {% endfor %}
-
+            <ul class="list-unstyled small mb-0">
+                <li class="d-flex justify-content-between py-2 border-bottom">
+                    <span>Attendance</span>
+                    <strong>{% if record.attendance is not None %}{{ record.attendance|floatformat:0 }}%{% else %}—{% endif %}</strong>
+                </li>
+                <li class="d-flex justify-content-between py-2 border-bottom">
+                    <span>Previous marks</span>
+                    <strong>{% if record.previous_percent is not None %}{{ record.previous_percent }}%{% else %}—{% endif %}</strong>
+                </li>
+                <li class="d-flex justify-content-between py-2 border-bottom">
+                    <span>Internal marks</span>
+                    <strong>{% if record.internal_percent is not None %}{{ record.internal_percent }}%{% else %}—{% endif %}</strong>
+                </li>
+                <li class="d-flex justify-content-between py-2 border-bottom">
+                    <span>Assignments</span>
+                    <strong>{% if record.assignment_percent is not None %}{{ record.assignment_percent|floatformat:0 }}%{% else %}—{% endif %}</strong>
+                </li>
+                <li class="d-flex justify-content-between py-2">
+                    <span>Participation</span>
+                    <strong>{% if record.participation is not None %}{{ record.participation|floatformat:0 }}/10{% else %}—{% endif %}</strong>
+                </li>
+            </ul>
         </div>
-
-
-
-        <!-- =========================
-             POSITIVE / IMPROVEMENT
-        ========================== -->
-
-        <div class="row g-4">
-
-
-            <!-- Positive Factors -->
-
-            <div class="col-md-6">
-
-                <div class="side-panel h-100">
-
-                    <h6 class="fw-semibold mb-3 text-success">
-
-                        <i
-                            class="bi bi-check-circle me-1"
-                            aria-hidden="true"
-                        ></i>
-
-                        Positive factors
-
-                    </h6>
-
-
-                    <ul class="small mb-0 ps-3">
-
-                        {% for point in positive_points %}
-
-                        <li class="mb-2">
-
-                            {{ point }}
-
-                        </li>
-
-                        {% empty %}
-
-                        <li class="mb-2 text-muted">
-
-                            None identified
-
-                        </li>
-
-                        {% endfor %}
-
-                    </ul>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Areas To Improve -->
-
-            <div class="col-md-6">
-
-                <div class="side-panel h-100">
-
-                    <h6 class="fw-semibold mb-3 text-danger">
-
-                        <i
-                            class="bi bi-exclamation-circle me-1"
-                            aria-hidden="true"
-                        ></i>
-
-                        Areas to improve
-
-                    </h6>
-
-
-                    <ul class="small mb-0 ps-3">
-
-                        {% for point in improve_points %}
-
-                        <li class="mb-2">
-
-                            {{ point }}
-
-                        </li>
-
-                        {% empty %}
-
-                        <li class="mb-2 text-muted">
-
-                            None identified
-
-                        </li>
-
-                        {% endfor %}
-
-                    </ul>
-
-                </div>
-
-            </div>
-
-        </div>
-
     </div>
 
+    <div class="col-lg-7">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-lightbulb me-1" aria-hidden="true"></i> SHAP factor impact
+            </h6>
+            {% if factors %}
+                {% for f in factors %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small">
+                        <span>
+                            {% if f.impact > 0 %}<span class="text-success fw-bold">+</span>
+                            {% elif f.impact < 0 %}<span class="text-danger fw-bold">−</span>
+                            {% else %}<span class="text-muted">·</span>{% endif %}
+                            {{ f.name }}
+                        </span>
+                        <span class="text-muted">{{ f.impact|floatformat:4 }}</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar {% if f.impact >= 0 %}bg-success{% else %}bg-danger{% endif %}"
+                             style="width: {{ f.bar_width|floatformat:0 }}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="small text-muted mb-0">Explanation unavailable — SHAP data was not generated for this prediction.</p>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
+<!-- Positive factors + Areas to improve -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3 text-success">
+                <i class="bi bi-check-circle me-1" aria-hidden="true"></i> Positive factors
+            </h6>
+            {% if shap_sections.shap_available and shap_sections.positive_factors %}
+                {% for fac in shap_sections.positive_factors %}
+                <div class="mb-3">
+                    <div class="fw-semibold small">✓ {{ fac.label }}: {{ fac.value_str }}</div>
+                    <div class="small text-muted">{{ fac.explanation }}</div>
+                </div>
+                {% endfor %}
+            {% elif positive_points %}
+                <ul class="small mb-0 ps-3">
+                    {% for point in positive_points %}<li>{{ point }}</li>{% endfor %}
+                </ul>
+            {% else %}
+                <p class="small text-muted mb-0">No positive factors identified.</p>
+            {% endif %}
+        </div>
+    </div>
 
+    <div class="col-lg-6">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3 text-danger">
+                <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i> Areas to improve
+            </h6>
+            {% if shap_sections.shap_available and shap_sections.negative_factors %}
+                {% for fac in shap_sections.negative_factors %}
+                <div class="mb-3">
+                    <div class="fw-semibold small">! {{ fac.label }}</div>
+                    <div class="small">Current: {{ fac.value_str }}</div>
+                    <div class="small text-muted">{{ fac.explanation }}</div>
+                    <div class="small mt-1">
+                        <strong>Suggested action:</strong>
+                        {% firstof fac.suggestion "Review this factor with the student and plan appropriate academic support." %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% elif improve_points %}
+                <ul class="small mb-0 ps-3">
+                    {% for point in improve_points %}<li>{{ point }}</li>{% endfor %}
+                </ul>
+            {% else %}
+                <p class="small text-muted mb-0">No specific improvement areas identified.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
 
-<!-- =========================
-     PDF DOWNLOAD SCRIPT
-========================= -->
+<!-- Teacher decision -->
+<div class="side-panel mb-4">
+    <h6 class="fw-semibold mb-3">
+        <i class="bi bi-person-check me-1" aria-hidden="true"></i> Teacher decision
+    </h6>
+    <form method="post" action="{% url 'teacher_decision' prediction.id %}">
+        {% csrf_token %}
+        {% with current=prediction.teacher_decision.decision %}
+        <div class="d-flex flex-wrap gap-4 mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="decision" id="decAgree"
+                       value="accepted" {% if current == "accepted" %}checked{% endif %} required>
+                <label class="form-check-label" for="decAgree">Agree</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="decision" id="decPartial"
+                       value="partially_agree" {% if current == "partially_agree" %}checked{% endif %}>
+                <label class="form-check-label" for="decPartial">Partially agree</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="decision" id="decDisagree"
+                       value="disagree" {% if current == "disagree" %}checked{% endif %}>
+                <label class="form-check-label" for="decDisagree">Disagree</label>
+            </div>
+        </div>
+        {% endwith %}
+        <div class="mb-3">
+            <label for="decComment" class="form-label small">Comment</label>
+            <textarea class="form-control" id="decComment" name="comment" rows="3">{{ prediction.teacher_decision.comment }}</textarea>
+        </div>
+        <div class="text-end">
+            <button type="submit" class="btn btn-primary">Save feedback</button>
+        </div>
+    </form>
+</div>
 
-<script>
+<div class="alert alert-light border small mb-4">
+    <i class="bi bi-shield-check me-1"></i>
+    <strong>HC-XAI note:</strong> This prediction supports your decision-making.
+    The teacher remains the final decision-maker.
+</div>
 
-document.addEventListener("DOMContentLoaded", function () {
-
-    const downloadButton =
-        document.getElementById("downloadReportBtn");
-
-
-    if (!downloadButton) {
-        return;
-    }
-
-
-    downloadButton.addEventListener("click", function () {
-
-        const btn = this;
-
-        const label =
-            btn.querySelector(".btn-label");
-
-        const loading =
-            btn.querySelector(".btn-loading");
-
-
-        /* Prevent multiple clicks */
-
-        if (btn.disabled) {
-            return;
-        }
-
-
-        /* Show loading state */
-
-        btn.disabled = true;
-
-
-        if (label) {
-            label.classList.add("d-none");
-        }
-
-
-        if (loading) {
-            loading.classList.remove("d-none");
-        }
-
-
-        /*
-         * Django generates the correct URL
-         * for the currently selected student.
-         *
-         * Example:
-         *
-         * /report/101/pdf/
-         *
-         * /report/102/pdf/
-         *
-         * etc.
-         */
-
-        const pdfUrl =
-            "{% url 'report_pdf' student_id=student_id %}";
-
-
-        /*
-         * Start PDF download.
-         *
-         * This calls:
-         *
-         * report_pdf()
-         *
-         * in views.py
-         */
-
-        window.location.href = pdfUrl;
-
-
-        /*
-         * Restore button after download starts.
-         */
-
-        setTimeout(function () {
-
-            btn.disabled = false;
-
-
-            if (label) {
-                label.classList.remove("d-none");
-            }
-
-
-            if (loading) {
-                loading.classList.add("d-none");
-            }
-
-        }, 2000);
-
-    });
-
-});
-
-</script>
-
+{% endwith %}
 {% endblock %}

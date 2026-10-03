@@ -9,111 +9,193 @@
 
 <div class="row g-4">
     <div class="col-lg-8">
+        <!-- Action Cards -->
         <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
             <div class="col">
                 <a href="{% url 'predict_performance' %}" class="action-card text-decoration-none">
                     <div class="action-icon" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></div>
-                    <div>
-                        <div class="action-title">Predict performance</div>
-                        <div class="action-sub">Run a new student prediction</div>
-                    </div>
+                    <div><div class="action-title">Predict performance</div><div class="action-sub">Run a new student prediction</div></div>
                 </a>
             </div>
             <div class="col">
                 <a href="{% url 'compare_students' %}" class="action-card text-decoration-none">
                     <div class="action-icon" aria-hidden="true"><i class="bi bi-arrow-left-right"></i></div>
-                    <div>
-                        <div class="action-title">Compare students</div>
-                        <div class="action-sub">Side-by-side factor comparison</div>
-                    </div>
+                    <div><div class="action-title">Compare students</div><div class="action-sub">Side-by-side factor comparison</div></div>
                 </a>
             </div>
             <div class="col">
                 <a href="{% url 'student_list' %}" class="action-card text-decoration-none">
                     <div class="action-icon" aria-hidden="true"><i class="bi bi-people"></i></div>
-                    <div>
-                        <div class="action-title">View all students</div>
-                        <div class="action-sub">Full class records list</div>
-                    </div>
+                    <div><div class="action-title">View all students</div><div class="action-sub">Full class records list</div></div>
                 </a>
             </div>
             <div class="col">
                 <a href="{% url 'class_analytics' %}" class="action-card text-decoration-none">
                     <div class="action-icon" aria-hidden="true"><i class="bi bi-bar-chart"></i></div>
-                    <div>
-                        <div class="action-title">Class analytics</div>
-                        <div class="action-sub">Trends across your batches</div>
-                    </div>
+                    <div><div class="action-title">Class analytics</div><div class="action-sub">Trends across your batches</div></div>
                 </a>
             </div>
         </div>
 
-        <div class="row row-cols-2 row-cols-md-3 g-3">
+        <!-- Stat Cards -->
+        <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
             <div class="col">
                 <div class="stat-card">
                     <div class="stat-label">Total students</div>
-                    <div class="stat-value">{{ total_predictions|default:"0" }}</div>
+                    <div class="stat-value">{{ total_students|default:"0" }}</div>
                 </div>
             </div>
             <div class="col">
                 <div class="stat-card">
                     <div class="stat-label">Avg. score</div>
-                    <div class="stat-value">{{ avg_score|default:"—" }}%</div>
+                    <div class="stat-value">{% if avg_score %}{{ avg_score|floatformat:1 }}%{% else %}—{% endif %}</div>
                 </div>
             </div>
             <div class="col">
                 <div class="stat-card">
-                    <div class="stat-label">Needs attention</div>
+                    <div class="stat-label">At Risk</div>
                     <div class="stat-value text-danger">{{ needs_attention_count|default:"0" }}</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="stat-card">
+                    <div class="stat-label">Total predictions</div>
+                    <div class="stat-value">{{ total_predictions|default:"0" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- D3 Charts Row -->
+        <div class="row g-4 mb-4">
+            <!-- Performance Category Distribution -->
+            <div class="col-md-7">
+                <div class="side-panel h-100">
+                    <h6 class="fw-semibold mb-3"><i class="bi bi-bar-chart-line me-1"></i> Performance distribution</h6>
+                    <div id="dashboard-dist-chart"></div>
+                </div>
+            </div>
+            <!-- Risk Level Donut -->
+            <div class="col-md-5">
+                <div class="side-panel h-100 text-center">
+                    <h6 class="fw-semibold mb-3"><i class="bi bi-exclamation-triangle me-1"></i> Risk levels</h6>
+                    <div id="dashboard-risk-chart" class="d-flex justify-content-center"></div>
+                    <div id="risk-legend" class="d-flex justify-content-center gap-3 mt-3 small"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Recent Predictions Panel -->
     <div class="col-lg-4">
         <div class="side-panel">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="h6 mb-0">Predicted reports</h3>
                 <a href="{% url 'student_list' %}" class="small text-decoration-none">See all</a>
             </div>
-
             {% for prediction in recent_predictions %}
             <div class="doc-row">
-                <a href="{% url 'report_detail' prediction.student_id %}" class="d-flex align-items-center gap-2 min-width-0 text-decoration-none flex-grow-1">
+                <a href="{% url 'report_detail' prediction.student.student_id %}" class="d-flex align-items-center gap-2 min-width-0 text-decoration-none flex-grow-1">
                     <div class="doc-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></div>
                     <div class="min-width-0">
-                        <div class="doc-name text-truncate">{{ prediction.student_name }}</div>
-                        <div class="doc-meta">{{ prediction.created_at|date:"d M"|default:"—" }} &middot; {{ prediction.predicted_percentage }}%</div>
+                        <div class="doc-name text-truncate">{{ prediction.student.full_name }}</div>
+                        <div class="doc-meta">{{ prediction.created_at|date:"d M" }} · {{ prediction.predicted_percentage }}%</div>
                     </div>
                 </a>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge-category badge-{{ prediction.performance_category|slugify }}">{{ prediction.performance_category }}</span>
-                    <button type="button" class="btn btn-sm p-0 border-0 bg-transparent download-icon-btn" data-student="{{ prediction.student_name }}" aria-label="Download report for {{ prediction.student_name }}">
-                        <i class="bi bi-download text-muted" aria-hidden="true"></i>
-                    </button>
-                </div>
+                <span class="badge-category badge-{{ prediction.predicted_category|slugify }}">{{ prediction.predicted_category }}</span>
             </div>
             {% empty %}
             <div class="hc-empty-state py-4">
                 <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
                 <p class="mb-3">No predictions yet.</p>
-                <a href="{% url 'predict_performance' %}" class="btn btn-primary btn-sm">
-                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Predict performance
-                </a>
+                <a href="{% url 'predict_performance' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i> Predict performance</a>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
 
+<!-- D3.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
-document.querySelectorAll('.download-icon-btn').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const student = this.dataset.student;
-        showToast(`Download for ${student} will be available once the backend is connected.`, 'primary');
+// ── Real data from Django context (category_counts dict) ──────────────────
+const categoryData = [
+    { name: "Excellent",         count: {{ category_counts.Excellent|default:0 }}, color: "#16a34a" },
+    { name: "Good",              count: {{ category_counts.Good|default:0 }}, color: "#4f46e5" },
+    { name: "Average",           count: {{ category_counts.Average|default:0 }}, color: "#d97706" },
+    { name: "Needs Improvement", count: {{ needs_improvement_count|default:0 }}, color: "#ea580c" },
+    { name: "At Risk",            count: {{ at_risk_count|default:0 }}, color: "#dc2626" },
+];
+
+// ── Real data from Django context (risk_counts dict) ─────────────────────
+const riskData = [
+    { name: "Low",    count: {{ risk_counts.Low|default:0 }},    color: "#16a34a" },
+    { name: "Medium", count: {{ risk_counts.Medium|default:0 }}, color: "#d97706" },
+    { name: "High",   count: {{ risk_counts.High|default:0 }},   color: "#dc2626" },
+];
+
+// ── Horizontal Bar Chart: Performance Distribution ────────────────────────
+(function drawDistribution() {
+    const el = document.getElementById("dashboard-dist-chart");
+    const totalW = el.clientWidth || 380;
+    const margin = { top: 6, right: 70, bottom: 6, left: 148 };
+    const barH = 26, gap = 10;
+    const width = totalW - margin.left - margin.right;
+    const data = categoryData.filter(d => d.count > 0);
+    if (!data.length) { el.innerHTML = '<p class="text-muted small">No predictions yet.</p>'; return; }
+    const height = data.length * (barH + gap) + margin.top + margin.bottom;
+    const total = d3.sum(data, d => d.count) || 1;
+    const x = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).range([0, width]);
+
+    const svg = d3.select("#dashboard-dist-chart").append("svg").attr("width", totalW).attr("height", height);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const row = g.selectAll(".row").data(data).join("g")
+        .attr("transform", (d, i) => `translate(0,${i * (barH + gap)})`);
+
+    row.append("text").attr("x", -8).attr("y", barH / 2).attr("dy", "0.35em")
+        .attr("text-anchor", "end").attr("font-size", "12px").attr("fill", "#374151").text(d => d.name);
+
+    row.append("rect").attr("width", width).attr("height", barH).attr("rx", 6).attr("fill", "#f1f5f9");
+
+    row.append("rect").attr("height", barH).attr("rx", 6).attr("fill", d => d.color).attr("opacity", 0.85)
+        .attr("width", 0)
+        .transition().duration(700).ease(d3.easeCubicOut).delay((d, i) => i * 80)
+        .attr("width", d => x(d.count));
+
+    row.append("text")
+        .attr("x", d => x(d.count) + 8).attr("y", barH / 2).attr("dy", "0.35em")
+        .attr("font-size", "11px").attr("font-weight", "600").attr("fill", "#374151").attr("opacity", 0)
+        .text(d => `${d.count} (${Math.round(d.count * 100 / total)}%)`)
+        .transition().duration(500).delay((d, i) => i * 80 + 400).attr("opacity", 1);
+})();
+
+// ── Donut Chart: Risk Levels ──────────────────────────────────────────────
+(function drawRisk() {
+    const size = 160, r = 65, ir = 40;
+    const data = riskData.filter(d => d.count > 0);
+    if (!data.length) { document.getElementById("dashboard-risk-chart").innerHTML = '<p class="text-muted small">No data.</p>'; return; }
+
+    const svg = d3.select("#dashboard-risk-chart").append("svg").attr("width", size).attr("height", size);
+    const g = svg.append("g").attr("transform", `translate(${size / 2},${size / 2})`);
+    const pie = d3.pie().value(d => d.count).sort(null);
+    const arc = d3.arc().innerRadius(ir).outerRadius(r);
+
+    g.selectAll("path").data(pie(data)).join("path")
+        .attr("fill", d => d.data.color).attr("opacity", 0.85)
+        .attr("d", arc)
+        .attr("stroke", "white").attr("stroke-width", 2);
+
+    const total = d3.sum(data, d => d.count);
+    g.append("text").attr("text-anchor", "middle").attr("dy", "-0.2em")
+        .attr("font-size", "18px").attr("font-weight", "700").attr("fill", "#1e293b").text(total);
+    g.append("text").attr("text-anchor", "middle").attr("dy", "1.2em")
+        .attr("font-size", "10px").attr("fill", "#64748b").text("students");
+
+    // Legend
+    const legend = document.getElementById("risk-legend");
+    data.forEach(d => {
+        legend.innerHTML += `<span><span style="display:inline-block;width:10px;height:10px;background:${d.color};border-radius:2px;margin-right:4px;"></span>${d.name}: ${d.count}</span>`;
     });
-});
+})();
 </script>
 {% endblock %}

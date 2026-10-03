@@ -20,7 +20,15 @@ class TeacherProfile(models.Model):
 
 
 class Student(models.Model):
-    student_id = models.CharField(max_length=50, unique=True)
+    # --- FIX 1: owner field — every student belongs to one teacher ---
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="students",
+        null=True,          # null=True only for the safe migration; never null in new code
+        blank=True,
+    )
+    student_id = models.CharField(max_length=50)   # no longer globally unique
     full_name = models.CharField(max_length=150)
     class_year = models.CharField(max_length=100, blank=True)
     education_level = models.CharField(max_length=50, blank=True)
@@ -34,6 +42,10 @@ class Student(models.Model):
 
     class Meta:
         ordering = ["full_name", "student_id"]
+        # student_id unique per owner — same ID can exist for different teachers
+        constraints = [
+            models.UniqueConstraint(fields=["owner", "student_id"], name="predictor_student_owner_student_id_uniq")
+        ]
 
     def __str__(self):
         return f"{self.student_id} - {self.full_name}"

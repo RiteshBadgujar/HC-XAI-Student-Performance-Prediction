@@ -99,7 +99,6 @@ document.getElementById('forgotPasswordForm').addEventListener('submit', functio
         btn.querySelector('.btn-loading').classList.add('d-none');
         btn.disabled = false;
         bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal')).hide();
-        showToast('Password reset emails will be available once the backend is connected.', 'primary');
     }, 800);
 });
 </script>

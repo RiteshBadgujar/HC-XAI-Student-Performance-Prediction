@@ -10,308 +10,462 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+<style>
+    @media print {
+        .no-print, .hc-breadcrumb { display: none !important; }
+        .side-panel, .stat-card { break-inside: avoid; }
+    }
+</style>
+
+<!-- Header: title + filters + export -->
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
     <div>
         <h2 class="mb-1">Class analytics</h2>
-        <p class="text-muted small mb-0">Trends across all your predictions, by class or program</p>
+        <p class="text-muted small mb-0">
+            Analytics based on your students' latest predictions
+            {% if selected_semester %}&middot; Semester {{ selected_semester }}{% endif %}
+        </p>
     </div>
-    <div style="min-width: 200px;">
-        <label for="classSelector" class="visually-hidden">Select class</label>
-        <select class="form-select" id="classSelector">
-            <option value="all">All classes</option>
-            <option value="MCA">MCA</option>
-            <option value="MBA">MBA</option>
-            <option value="BCA">BCA</option>
-            <option value="BSc-CS">B.Sc. Computer Science</option>
-        </select>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center no-print">
+        <div style="min-width: 180px;">
+            <label for="classSelector" class="visually-hidden">Select class</label>
+            <select class="form-select" id="classSelector">
+                <option value="all">All classes</option>
+                {% for class_name in class_names %}
+                    <option value="{{ class_name }}">{{ class_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <form method="get" id="semesterForm" style="min-width: 160px;">
+            <label for="semesterSelector" class="visually-hidden">Select semester</label>
+            <select class="form-select" id="semesterSelector" name="semester">
+                <option value="">All semesters</option>
+                {% for sem in semesters %}
+                    <option value="{{ sem }}" {% if selected_semester == sem|stringformat:"s" %}selected{% endif %}>
+                        Semester {{ sem }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <button type="button" class="btn btn-outline-primary" id="exportPdfBtn">
+            <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> Export PDF
+        </button>
     </div>
 </div>
 
-<div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+<!-- Summary cards -->
+<div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-3 mb-4">
     <div class="col">
         <div class="stat-card">
-            <div class="stat-label">Total predictions</div>
-            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-label">Students</div>
+            <div class="stat-value" id="statTotal">0</div>
         </div>
     </div>
     <div class="col">
         <div class="stat-card">
-            <div class="stat-label">Average score</div>
-            <div class="stat-value" id="statAvg">—%</div>
+            <div class="stat-label">Avg score</div>
+            <div class="stat-value" id="statAvg">0%</div>
         </div>
     </div>
     <div class="col">
         <div class="stat-card">
             <div class="stat-label">Excellent</div>
-            <div class="stat-value text-success" id="statExcellent">—</div>
+            <div class="stat-value text-success" id="statExcellent">0</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="stat-card">
+            <div class="stat-label">Good</div>
+            <div class="stat-value text-info" id="statGood">0</div>
         </div>
     </div>
     <div class="col">
         <div class="stat-card">
             <div class="stat-label">Needs attention</div>
-            <div class="stat-value text-danger" id="statNeedsAttention">—</div>
+            <div class="stat-value text-danger" id="statNeedsAttention">0</div>
         </div>
     </div>
 </div>
 
-<!-- Chart 1: Category distribution -->
+<!-- Row 1 -->
 <div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="side-panel">
-            <h6 class="fw-semibold mb-3"><i class="bi bi-pie-chart me-1" aria-hidden="true"></i> Category distribution</h6>
-            <canvas id="categoryChart" height="220"></canvas>
+    <div class="col-lg-6">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-pie-chart me-1" aria-hidden="true"></i> Performance distribution
+            </h6>
+            <div style="height: 280px;"><canvas id="categoryChart"></canvas></div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="side-panel h-100 d-flex flex-column justify-content-center">
-            <div class="doc-icon mb-3" style="width: 40px; height: 40px;" aria-hidden="true"><i class="bi bi-lightbulb"></i></div>
-            <h6 class="fw-semibold mb-2">What this shows</h6>
-            <p class="small text-muted mb-3" id="categoryExplanation">—</p>
-            <ul class="small mb-0 ps-3" id="categoryBreakdown"></ul>
+    <div class="col-lg-6">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-shield-check me-1" aria-hidden="true"></i> Risk distribution
+            </h6>
+            <div style="height: 280px;"><canvas id="riskChart"></canvas></div>
         </div>
     </div>
 </div>
 
-<!-- Chart 2: Average score by class -->
+<!-- Row 2 -->
 <div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="side-panel">
-            <h6 class="fw-semibold mb-3"><i class="bi bi-bar-chart me-1" aria-hidden="true"></i> Average score by class</h6>
-            <canvas id="classComparisonChart" height="220"></canvas>
+    <div class="col-lg-6">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-bar-chart me-1" aria-hidden="true"></i> Score by class
+            </h6>
+            <div style="height: 280px;"><canvas id="classComparisonChart"></canvas></div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="side-panel h-100 d-flex flex-column justify-content-center">
-            <div class="doc-icon mb-3" style="width: 40px; height: 40px;" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></div>
-            <h6 class="fw-semibold mb-2">What this shows</h6>
-            <p class="small text-muted mb-0" id="classComparisonExplanation">—</p>
+    <div class="col-lg-6">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-lightbulb me-1" aria-hidden="true"></i> Top SHAP factors
+            </h6>
+            <div style="height: 280px;"><canvas id="shapChart"></canvas></div>
         </div>
     </div>
 </div>
 
-<!-- Chart 3: Attendance vs score trend -->
+<!-- Row 3 -->
 <div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="side-panel">
-            <h6 class="fw-semibold mb-3"><i class="bi bi-graph-up me-1" aria-hidden="true"></i> Attendance vs. predicted score</h6>
-            <canvas id="attendanceScoreChart" height="220"></canvas>
+    <div class="col-lg-6">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-graph-up me-1" aria-hidden="true"></i> Attendance vs score
+            </h6>
+            <div style="height: 280px;"><canvas id="attendanceScoreChart"></canvas></div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="side-panel h-100 d-flex flex-column justify-content-center">
-            <div class="doc-icon mb-3" style="width: 40px; height: 40px;" aria-hidden="true"><i class="bi bi-link-45deg"></i></div>
-            <h6 class="fw-semibold mb-2">What this shows</h6>
-            <p class="small text-muted mb-0" id="attendanceExplanation">—</p>
+    <div class="col-lg-6">
+        <div class="side-panel h-100">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-clock-history me-1" aria-hidden="true"></i> Study hours vs score
+            </h6>
+            <div style="height: 280px;"><canvas id="studyHoursScoreChart"></canvas></div>
         </div>
     </div>
 </div>
 
-<!-- Common factors -->
+<!-- Students needing attention -->
 <div class="side-panel mb-4">
-    <h6 class="fw-semibold mb-3"><i class="bi bi-list-check me-1" aria-hidden="true"></i> Most common factors</h6>
-    <ul class="small mb-0 ps-3" id="commonFactorsList"></ul>
+    <h6 class="fw-semibold mb-3 text-danger">
+        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i> Students needing attention
+    </h6>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr class="small text-muted">
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Score</th>
+                    <th>Risk</th>
+                    <th>Main factor</th>
+                    <th class="no-print"></th>
+                </tr>
+            </thead>
+            <tbody id="attentionBody">
+                <tr><td colspan="6" class="text-muted small">No students need attention.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- HC-XAI interpretation -->
+<div class="alert alert-light border small mb-4">
+    <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
+    <strong>HC-XAI interpretation:</strong>
+    SHAP values indicate model contribution, not guaranteed causal relationships.
+    The teacher remains the final decision-maker.
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+
+{# analytics_json must be a Python dict in the view (NOT json.dumps output) #}
+{{ analytics_json|json_script:"analyticsData" }}
+
 <script>
-// Dummy per-class dataset — will be replaced with real DB aggregation once backend exists
-const CLASS_DATA = {
-    all: {
-        total: 128, avg: 76.4, excellent: 34, needsAttention: 19,
-        categories: [
-            {name: "Excellent", count: 34, color: "#16794f"},
-            {name: "Good", count: 48, color: "#4f46e5"},
-            {name: "Average", count: 27, color: "#92610b"},
-            {name: "Needs Attention", count: 19, color: "#b3261e"},
-        ],
-        classScores: [
-            {name: "MCA", score: 78}, {name: "MBA", score: 71},
-            {name: "BCA", score: 74}, {name: "B.Sc. CS", score: 80},
-        ],
-        attendanceScore: [
-            {attendance: 45, score: 39}, {attendance: 60, score: 56}, {attendance: 78, score: 82}, {attendance: 95, score: 91},
-        ],
-        commonFactors: [
-            "Attendance is the strongest positive driver across most students",
-            "Backlogs are the most common negative factor",
-            "Assignment completion shows the widest spread between top and bottom performers",
-        ],
-    },
-    MCA: {
-        total: 42, avg: 78.2, excellent: 14, needsAttention: 5,
-        categories: [
-            {name: "Excellent", count: 14, color: "#16794f"},
-            {name: "Good", count: 18, color: "#4f46e5"},
-            {name: "Average", count: 5, color: "#92610b"},
-            {name: "Needs Attention", count: 5, color: "#b3261e"},
-        ],
-        classScores: [{name: "MCA", score: 78.2}],
-        attendanceScore: [
-            {attendance: 50, score: 45}, {attendance: 70, score: 65}, {attendance: 85, score: 84}, {attendance: 96, score: 93},
-        ],
-        commonFactors: [
-            "Strong correlation between study hours and previous marks",
-            "Backlogs concentrated in a small group of at-risk students",
-            "High assignment completion overall compared to other programs",
-        ],
-    },
-    MBA: {
-        total: 35, avg: 71.0, excellent: 8, needsAttention: 7,
-        categories: [
-            {name: "Excellent", count: 8, color: "#16794f"},
-            {name: "Good", count: 15, color: "#4f46e5"},
-            {name: "Average", count: 5, color: "#92610b"},
-            {name: "Needs Attention", count: 7, color: "#b3261e"},
-        ],
-        classScores: [{name: "MBA", score: 71.0}],
-        attendanceScore: [
-            {attendance: 40, score: 35}, {attendance: 62, score: 58}, {attendance: 75, score: 70}, {attendance: 90, score: 85},
-        ],
-        commonFactors: [
-            "Participation score has a larger impact than in other programs",
-            "Attendance gap between top and bottom performers is significant",
-            "Fewer backlogs overall compared to technical programs",
-        ],
-    },
-    BCA: {
-        total: 30, avg: 74.0, excellent: 7, needsAttention: 4,
-        categories: [
-            {name: "Excellent", count: 7, color: "#16794f"},
-            {name: "Good", count: 13, color: "#4f46e5"},
-            {name: "Average", count: 6, color: "#92610b"},
-            {name: "Needs Attention", count: 4, color: "#b3261e"},
-        ],
-        classScores: [{name: "BCA", score: 74.0}],
-        attendanceScore: [
-            {attendance: 48, score: 42}, {attendance: 68, score: 60}, {attendance: 80, score: 76}, {attendance: 93, score: 88},
-        ],
-        commonFactors: [
-            "Assignment completion strongly predicts final category",
-            "Study hours vary widely across the cohort",
-            "Moderate backlog rate, mostly first-year subjects",
-        ],
-    },
-    "BSc-CS": {
-        total: 21, avg: 80.0, excellent: 5, needsAttention: 3,
-        categories: [
-            {name: "Excellent", count: 5, color: "#16794f"},
-            {name: "Good", count: 10, color: "#4f46e5"},
-            {name: "Average", count: 3, color: "#92610b"},
-            {name: "Needs Attention", count: 3, color: "#b3261e"},
-        ],
-        classScores: [{name: "B.Sc. CS", score: 80.0}],
-        attendanceScore: [
-            {attendance: 55, score: 50}, {attendance: 72, score: 68}, {attendance: 88, score: 86}, {attendance: 97, score: 94},
-        ],
-        commonFactors: [
-            "Highest average attendance among all programs",
-            "Strong link between tutoring sessions and score improvement",
-            "Very few backlogs reported this term",
-        ],
-    },
-};
-
-let categoryChartInstance, classComparisonChartInstance, attendanceScoreChartInstance;
-
-function renderCategoryChart(data) {
-    const ctx = document.getElementById('categoryChart').getContext('2d');
-    if (categoryChartInstance) categoryChartInstance.destroy();
-    categoryChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: data.categories.map(c => c.name),
-            datasets: [{ data: data.categories.map(c => c.count), backgroundColor: data.categories.map(c => c.color), borderWidth: 0 }]
-        },
-        options: {
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
-            cutout: '65%'
-        }
+(function () {
+    // Toolbar actions work even when there is no data
+    document.getElementById("semesterSelector").addEventListener("change", function () {
+        document.getElementById("semesterForm").submit();
+    });
+    document.getElementById("exportPdfBtn").addEventListener("click", function () {
+        window.print();
     });
 
-    document.getElementById('categoryBreakdown').innerHTML = data.categories.map(c => `
-        <li class="mb-1"><span class="fw-semibold">${c.name}:</span> ${c.count} students</li>
-    `).join('');
-}
+    function showEmptyState() {
+        document.querySelectorAll("canvas").forEach(c => {
+            const p = document.createElement("p");
+            p.className = "text-muted small text-center mt-4";
+            p.textContent = "No prediction data available yet.";
+            c.parentNode.replaceChild(p, c);
+        });
+    }
 
-function renderClassComparisonChart(data, selectedClass) {
-    const ctx = document.getElementById('classComparisonChart').getContext('2d');
-    if (classComparisonChartInstance) classComparisonChartInstance.destroy();
-    classComparisonChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.classScores.map(c => c.name),
-            datasets: [{
-                label: 'Average score',
-                data: data.classScores.map(c => c.score),
-                backgroundColor: '#4f46e5',
-                borderRadius: 6,
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
-        }
-    });
-}
+    const raw = document.getElementById("analyticsData");
+    let analyticsData = null;
+    try {
+        analyticsData = JSON.parse(raw.textContent);
+        if (typeof analyticsData === "string") analyticsData = JSON.parse(analyticsData);
+    } catch (e) {
+        console.error("HC-XAI: could not parse analytics data", e);
+    }
 
-function renderAttendanceScoreChart(data) {
-    const ctx = document.getElementById('attendanceScoreChart').getContext('2d');
-    if (attendanceScoreChartInstance) attendanceScoreChartInstance.destroy();
-    attendanceScoreChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.attendanceScore.map(p => p.attendance + '%'),
-            datasets: [{
-                label: 'Predicted score',
-                data: data.attendanceScore.map(p => p.score),
-                borderColor: '#4f46e5',
-                backgroundColor: 'rgba(79,70,229,0.1)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { title: { display: true, text: 'Attendance', font: { size: 11 } } },
-                y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+    if (!analyticsData || !analyticsData["all"] || !analyticsData["all"].total) {
+        showEmptyState();
+        return;
+    }
+    if (typeof Chart === "undefined") {
+        console.error("HC-XAI: Chart.js did not load");
+        return;
+    }
+
+    let categoryChartInstance = null;
+    let riskChartInstance = null;
+    let classComparisonChartInstance = null;
+    let attendanceScoreChartInstance = null;
+    let studyHoursScoreChartInstance = null;
+    let shapChartInstance = null;
+
+    const categoryColors = {
+        "Excellent": "#198754",
+        "Good": "#20c997",
+        "Average": "#ffc107",
+        "Needs Improvement": "#fd7e14",
+        "At Risk": "#dc3545"
+    };
+    const riskColors = { "Low": "#198754", "Medium": "#ffc107", "High": "#dc3545" };
+
+    const FALLBACK_COLOR = "#6c757d";
+    const BRAND_COLOR = "rgba(99, 102, 241, 1)";
+    const BRAND_COLOR_DIM = "rgba(99, 102, 241, 0.35)";
+
+    function destroyChart(instance) { if (instance) instance.destroy(); }
+
+    function findCount(items, name) {
+        const item = (items || []).find(row => row.name === name);
+        return item ? Number(item.count || 0) : 0;
+    }
+
+    function doughnut(canvasId, items, colors, previous) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+        destroyChart(previous);
+        return new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: items.map(i => i.name),
+                datasets: [{
+                    data: items.map(i => Number(i.count || 0)),
+                    backgroundColor: items.map(i => colors[i.name] || FALLBACK_COLOR),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "62%",
+                plugins: { legend: { position: "bottom" } }
             }
+        });
+    }
+
+    function createClassComparisonChart(allData, selectedClass) {
+        const ctx = document.getElementById("classComparisonChart").getContext("2d");
+        destroyChart(classComparisonChartInstance);
+        const rows = (allData && allData.class_scores) || [];
+
+        classComparisonChartInstance = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: rows.map(i => i.name),
+                datasets: [{
+                    label: "Average predicted score",
+                    data: rows.map(i => Number(i.score || 0)),
+                    backgroundColor: rows.map(i =>
+                        selectedClass === "all" || i.name === selectedClass ? BRAND_COLOR : BRAND_COLOR_DIM
+                    ),
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: c => c.parsed.y.toFixed(2) + "%" } }
+                },
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } }
+                }
+            }
+        });
+    }
+
+    function createScatterChart(canvasId, points, xLabel, yLabel) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+        const isAttendance = canvasId === "attendanceScoreChart";
+        destroyChart(isAttendance ? attendanceScoreChartInstance : studyHoursScoreChartInstance);
+
+        const instance = new Chart(ctx, {
+            type: "scatter",
+            data: {
+                datasets: [{
+                    label: "Students",
+                    data: (points || []).map(p => ({
+                        x: Number(p.x), y: Number(p.y), student: p.student || ""
+                    })),
+                    backgroundColor: BRAND_COLOR,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (c) {
+                                const name = c.raw && c.raw.student ? c.raw.student + " — " : "";
+                                return name + xLabel + ": " + c.parsed.x + " | " + yLabel + ": " + c.parsed.y + "%";
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: xLabel } },
+                    y: {
+                        beginAtZero: true, max: 100,
+                        title: { display: true, text: yLabel },
+                        ticks: { callback: v => v + "%" }
+                    }
+                }
+            }
+        });
+
+        if (isAttendance) attendanceScoreChartInstance = instance;
+        else studyHoursScoreChartInstance = instance;
+    }
+
+    function createShapChart(data) {
+        const ctx = document.getElementById("shapChart").getContext("2d");
+        destroyChart(shapChartInstance);
+        const factors = (data.shap_factors || []).slice(0, 10);
+
+        shapChartInstance = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: factors.map(i => i.name),
+                datasets: [{
+                    label: "Average absolute SHAP impact",
+                    data: factors.map(i => Number(i.average_impact || 0)),
+                    backgroundColor: BRAND_COLOR,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                indexAxis: "y",
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: { display: true, text: "Average absolute SHAP impact" }
+                    }
+                }
+            }
+        });
+    }
+
+    // Built with DOM nodes (textContent) so student names can never inject HTML
+    function renderAttention(rows) {
+        const body = document.getElementById("attentionBody");
+        body.replaceChildren();
+
+        if (!rows || !rows.length) {
+            const tr = document.createElement("tr");
+            const td = document.createElement("td");
+            td.colSpan = 6;
+            td.className = "text-muted small";
+            td.textContent = "No students need attention.";
+            tr.appendChild(td);
+            body.appendChild(tr);
+            return;
         }
+
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+
+            const cells = [
+                row.name,
+                row.class_name,
+                row.score === null || row.score === undefined ? "—" : Number(row.score).toFixed(1) + "%"
+            ];
+            cells.forEach(text => {
+                const td = document.createElement("td");
+                td.className = "small";
+                td.textContent = text;
+                tr.appendChild(td);
+            });
+
+            const riskTd = document.createElement("td");
+            const badge = document.createElement("span");
+            badge.className = "badge " + (
+                row.risk === "High" ? "bg-danger" :
+                row.risk === "Medium" ? "bg-warning text-dark" : "bg-success"
+            );
+            badge.textContent = row.risk;
+            riskTd.appendChild(badge);
+            tr.appendChild(riskTd);
+
+            const factorTd = document.createElement("td");
+            factorTd.className = "small";
+            factorTd.textContent = row.main_factor || "—";
+            tr.appendChild(factorTd);
+
+            const actionTd = document.createElement("td");
+            actionTd.className = "text-end no-print";
+            const link = document.createElement("a");
+            link.className = "btn btn-sm btn-outline-primary";
+            link.href = row.url;
+            link.textContent = "View student";
+            actionTd.appendChild(link);
+            tr.appendChild(actionTd);
+
+            body.appendChild(tr);
+        });
+    }
+
+    function updateView(selectedClass) {
+        const data = analyticsData[selectedClass];
+        if (!data) return;
+
+        document.getElementById("statTotal").textContent = data.total || 0;
+        document.getElementById("statAvg").textContent = Number(data.average_score || 0).toFixed(2) + "%";
+        document.getElementById("statExcellent").textContent = findCount(data.categories, "Excellent");
+        document.getElementById("statGood").textContent = findCount(data.categories, "Good");
+        document.getElementById("statNeedsAttention").textContent =
+            findCount(data.categories, "Needs Improvement") + findCount(data.categories, "At Risk");
+
+        categoryChartInstance = doughnut("categoryChart", data.categories || [], categoryColors, categoryChartInstance);
+        riskChartInstance = doughnut("riskChart", data.risk_levels || [], riskColors, riskChartInstance);
+        createClassComparisonChart(analyticsData["all"], selectedClass);
+        createShapChart(data);
+        createScatterChart("attendanceScoreChart", data.attendance_score, "Attendance (%)", "Predicted score");
+        createScatterChart("studyHoursScoreChart", data.study_hours_score, "Study hours", "Predicted score");
+        renderAttention(data.attention);
+    }
+
+    document.getElementById("classSelector").addEventListener("change", function () {
+        updateView(this.value);
     });
-}
 
-function renderExplanations(data, selectedClass) {
-    const label = selectedClass === 'all' ? 'across all classes' : `for ${selectedClass}`;
-    document.getElementById('categoryExplanation').textContent =
-        `This breaks down every prediction ${label} into performance categories, so you can spot how many students fall into each bucket at a glance.`;
-    document.getElementById('classComparisonExplanation').textContent = selectedClass === 'all'
-        ? 'Compares average predicted score across every class/program, helping identify which cohorts may need more support.'
-        : `Showing the average predicted score for ${selectedClass} only. Switch to "All classes" to compare against other programs.`;
-    document.getElementById('attendanceExplanation').textContent =
-        `A clear upward trend here confirms attendance is one of the strongest predictors of performance ${label} — the steeper the line, the more attendance matters.`;
-}
-
-function updateView(selectedClass) {
-    const data = CLASS_DATA[selectedClass];
-
-    document.getElementById('statTotal').textContent = data.total;
-    document.getElementById('statAvg').textContent = data.avg + '%';
-    document.getElementById('statExcellent').textContent = data.excellent;
-    document.getElementById('statNeedsAttention').textContent = data.needsAttention;
-
-    renderCategoryChart(data);
-    renderClassComparisonChart(data, selectedClass);
-    renderAttendanceScoreChart(data);
-    renderExplanations(data, selectedClass);
-
-    document.getElementById('commonFactorsList').innerHTML = data.commonFactors.map(f => `<li class="mb-2">${f}</li>`).join('');
-}
-
-document.getElementById('classSelector').addEventListener('change', function () {
-    updateView(this.value);
-});
-
-updateView('all');
+    updateView("all");
+})();
 </script>
 {% endblock %}

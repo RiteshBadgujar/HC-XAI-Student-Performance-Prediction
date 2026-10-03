@@ -1,81 +1,40 @@
-# ============================================
 # Python
-# ============================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 
-# ============================================
-# Virtual Environment
-# ============================================
+# Virtual environment
 venv/
 env/
 ENV/
 .venv/
 
-# ============================================
 # Django
-# ============================================
 *.log
 local_settings.py
-
-# Local SQLite database
 db.sqlite3
 db.sqlite3-journal
-
-# User uploaded/generated files
 media/
-
-# Collected static files
 staticfiles/
 
-# ============================================
-# Environment Variables / Secrets
-# ============================================
-.env
-.env.*
-!.env.example
-
-# ============================================
-# ML / Data Science Cache
-# ============================================
-.ipynb_checkpoints/
-.pytest_cache/
+# ML model artifacts (if large / regenerable)
+predictor/ml/*.pkl
 predictor/ml/__pycache__/
 
-# ============================================
-# IDE / Editors
-# ============================================
+# Environment variables
+.env
+
+# IDE / editor
 .vscode/
 .idea/
 *.swp
-*.swo
-
-# ============================================
-# OS Generated Files
-# ============================================
 .DS_Store
-Thumbs.db
-desktop.ini
 
-# ============================================
-# Build / Distribution
-# ============================================
+# Distribution / packaging
 build/
 dist/
 *.egg-info/
 
-# ============================================
-# Coverage / Testing
-# ============================================
-.coverage
-.coverage.*
-htmlcov/
-
-# ============================================
-# Temporary Files
-# ============================================
-*.tmp
-*.temp
-*.bak
+# Jupyter notebooks checkpoints (if you use any for ML experiments)
+.ipynb_checkpoints/

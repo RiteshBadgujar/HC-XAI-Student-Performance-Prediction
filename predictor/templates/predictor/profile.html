@@ -133,20 +133,12 @@
 
 <script>
 document.getElementById('profileForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (!this.checkValidity()) { this.reportValidity(); return; }
-
+    if (!this.checkValidity()) { e.preventDefault(); this.reportValidity(); return; }
     const btn = document.getElementById('saveProfileBtn');
     btn.querySelector('.btn-label').classList.add('d-none');
     btn.querySelector('.btn-loading').classList.remove('d-none');
     btn.disabled = true;
-
-    setTimeout(function () {
-        btn.querySelector('.btn-label').classList.remove('d-none');
-        btn.querySelector('.btn-loading').classList.add('d-none');
-        btn.disabled = false;
-        showToast('Profile changes will be saved once the backend is connected.', 'primary');
-    }, 800);
+    // Allow real form submission to Django
 });
 
 document.getElementById('changePasswordForm').addEventListener('submit', function (e) {
@@ -168,13 +160,8 @@ document.getElementById('changePasswordForm').addEventListener('submit', functio
     btn.querySelector('.btn-loading').classList.remove('d-none');
     btn.disabled = true;
 
-    setTimeout(function () {
-        btn.querySelector('.btn-label').classList.remove('d-none');
-        btn.querySelector('.btn-loading').classList.add('d-none');
-        btn.disabled = false;
-        bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
-        showToast('Password update will be available once the backend is connected.', 'primary');
-    }, 800);
+    // Allow real form submission to Django
+    this.submit();
 });
 </script>
 {% endblock %}
