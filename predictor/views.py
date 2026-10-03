@@ -443,39 +443,1004 @@ def feedback(request, prediction_id):
         return redirect("report_detail", prediction.student.student_id)
     return render(request, "predictor/feedback_form.html", {"form": form, "prediction": prediction})
 
-
 @login_required
 def report_pdf(request, student_id):
-    student = get_object_or_404(Student, student_id=student_id)
-    prediction = student.predictions.select_related("academic_record").first()
+    student = get_object_or_404(
+        Student,
+        student_id=student_id
+    )
+
+    # Get latest prediction for this student
+    prediction = (
+        student.predictions
+        .select_related("academic_record")
+        .order_by("-created_at")
+        .first()
+    )
+
     if not prediction:
-        messages.error(request, "Generate a prediction before creating a report.")
+        messages.error(
+            request,
+            "Generate a prediction before creating a report."
+        )
         return redirect("student_list")
+
+    # =========================================================
+    # IMPORT REPORTLAB
+    # =========================================================
+
     try:
         from reportlab.lib.pagesizes import A4
-        from reportlab.pdfgen import canvas
-    except ImportError:
-        messages.error(request, "ReportLab is not installed. Install reportlab to generate PDFs.")
-        return redirect("report_detail", student_id=student.student_id)
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.styles import (
+            getSampleStyleSheet,
+            ParagraphStyle
+        )
+        from reportlab.lib.units import mm
+        from reportlab.platypus import (
+            SimpleDocTemplate,
+            Paragraph,
+            Spacer,
+            Table,
+            TableStyle
+        )
 
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{student.student_id}-hc-xai-report.pdf"'
-    pdf = canvas.Canvas(response, pagesize=A4)
-    y = 800
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(50, y, "HC-XAI Student Performance Report")
-    y -= 35
-    pdf.setFont("Helvetica", 11)
-    lines = [
-        f"Student ID: {student.student_id}", f"Student Name: {student.full_name}", f"Class/Year: {student.class_year or '—'}",
-        f"Prediction: {prediction.predicted_category}", f"Risk Level: {prediction.risk_level}", f"Confidence: {prediction.confidence or '—'}%",
-        f"Attendance: {prediction.academic_record.attendance or '—'}%", f"Study Hours: {prediction.academic_record.study_hours or '—'} / week",
-        f"Backlogs: {prediction.academic_record.backlogs}",
+    except ImportError:
+        messages.error(
+            request,
+            "ReportLab is not installed. "
+            "Install it using: pip install reportlab"
+        )
+
+        return redirect(
+            "report_detail",
+            student_id=student.student_id
+        )
+
+    # =========================================================
+    # ACADEMIC RECORD
+    # =========================================================
+
+    record = prediction.academic_record
+
+    # =========================================================
+    # SHAP EXPLANATION
+    # =========================================================
+
+    explanation = getattr(
+        prediction,
+        "shap_explanation",
+        None
+    )
+
+    factors = []
+
+    if explanation:
+        factors = explanation.local_features or []
+
+    # =========================================================
+    # AI REVIEW
+    # =========================================================
+
+    try:
+
+        review = build_grounded_review(
+            record,
+            prediction,
+            explanation
+        )
+
+        positive_points = review.get(
+            "strengths",
+            []
+        )
+
+        improve_points = review.get(
+            "improvements",
+            []
+        )
+
+    except Exception:
+
+        positive_points = []
+        improve_points = []
+
+    # =========================================================
+    # PDF RESPONSE
+    # =========================================================
+
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
+
+    response["Content-Disposition"] = (
+        f'attachment; '
+        f'filename="{student.student_id}-hc-xai-report.pdf"'
+    )
+
+    # =========================================================
+    # PDF DOCUMENT
+    # =========================================================
+
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=A4,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
+        title="HC-XAI Student Performance Report",
+        author="HC-XAI"
+    )
+
+    # =========================================================
+    # STYLES
+    # =========================================================
+
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "HCXAITitle",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=22,
+        alignment=TA_CENTER,
+        spaceAfter=6
+    )
+
+    subtitle_style = ParagraphStyle(
+        "HCXAISubtitle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=12,
+        alignment=TA_CENTER,
+        spaceAfter=15
+    )
+
+    heading_style = ParagraphStyle(
+        "HCXAIHeading",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=13,
+        leading=16,
+        spaceBefore=12,
+        spaceAfter=8
+    )
+
+    normal_style = ParagraphStyle(
+        "HCXAINormal",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9.5,
+        leading=13
+    )
+
+    small_style = ParagraphStyle(
+        "HCXAISmall",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=8.5,
+        leading=12
+    )
+
+    # =========================================================
+    # PDF CONTENT
+    # =========================================================
+
+    story = []
+
+    # =========================================================
+    # TITLE
+    # =========================================================
+
+    story.append(
+        Paragraph(
+            "HC-XAI Student Performance Report",
+            title_style
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "Human-Centered Explainable AI",
+            subtitle_style
+        )
+    )
+
+    # =========================================================
+    # STUDENT INFORMATION
+    # =========================================================
+
+    story.append(
+        Paragraph(
+            "Student Information",
+            heading_style
+        )
+    )
+
+    student_data = [
+        [
+            Paragraph(
+                "<b>Student ID</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(student.student_id),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Student Name</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(student.full_name),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Class / Year</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(student.class_year or "—"),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Education Level</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(student.education_level or "—"),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Age</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(student.age or "—"),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Gender</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(student.gender or "—"),
+                normal_style
+            )
+        ]
     ]
-    for line in lines:
-        pdf.drawString(50, y, line)
-        y -= 20
-    pdf.setFont("Helvetica-Oblique", 9)
-    pdf.drawString(50, 90, "AI output is decision support. The teacher remains the final decision-maker.")
-    pdf.save()
+
+    student_table = Table(
+        student_data,
+        colWidths=[
+            55 * mm,
+            110 * mm
+        ]
+    )
+
+    student_table.setStyle(
+        TableStyle([
+            (
+                "GRID",
+                (0, 0),
+                (-1, -1),
+                0.5,
+                colors.grey
+            ),
+            (
+                "BACKGROUND",
+                (0, 0),
+                (0, -1),
+                colors.whitesmoke
+            ),
+            (
+                "VALIGN",
+                (0, 0),
+                (-1, -1),
+                "MIDDLE"
+            ),
+            (
+                "LEFTPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "RIGHTPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "TOPPADDING",
+                (0, 0),
+                (-1, -1),
+                6
+            ),
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, -1),
+                6
+            )
+        ])
+    )
+
+    story.append(student_table)
+
+    # =========================================================
+    # PREDICTION SUMMARY
+    # =========================================================
+
+    story.append(
+        Paragraph(
+            "Prediction Summary",
+            heading_style
+        )
+    )
+
+    confidence = (
+        prediction.confidence
+        if prediction.confidence is not None
+        else "—"
+    )
+
+    if confidence != "—":
+        confidence = f"{confidence}%"
+
+    prediction_data = [
+        [
+            Paragraph(
+                "<b>Predicted Performance</b>",
+                normal_style
+            ),
+            Paragraph(
+                f"{prediction.predicted_percentage}%",
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Performance Category</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(prediction.predicted_category),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Risk Level</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(prediction.risk_level),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Confidence</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(confidence),
+                normal_style
+            )
+        ]
+    ]
+
+    prediction_table = Table(
+        prediction_data,
+        colWidths=[
+            55 * mm,
+            110 * mm
+        ]
+    )
+
+    prediction_table.setStyle(
+        TableStyle([
+            (
+                "GRID",
+                (0, 0),
+                (-1, -1),
+                0.5,
+                colors.grey
+            ),
+            (
+                "BACKGROUND",
+                (0, 0),
+                (0, -1),
+                colors.whitesmoke
+            ),
+            (
+                "VALIGN",
+                (0, 0),
+                (-1, -1),
+                "MIDDLE"
+            ),
+            (
+                "LEFTPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "RIGHTPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "TOPPADDING",
+                (0, 0),
+                (-1, -1),
+                6
+            ),
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, -1),
+                6
+            )
+        ])
+    )
+
+    story.append(prediction_table)
+
+    # =========================================================
+    # ACADEMIC INFORMATION
+    # =========================================================
+
+    story.append(
+        Paragraph(
+            "Academic Information",
+            heading_style
+        )
+    )
+
+    academic_data = [
+        [
+            Paragraph(
+                "<b>Previous Marks</b>",
+                normal_style
+            ),
+            Paragraph(
+                f"{record.previous_gained_marks or '—'} / "
+                f"{record.previous_total_marks or '—'}",
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Internal Marks</b>",
+                normal_style
+            ),
+            Paragraph(
+                f"{record.internal_gained_marks or '—'} / "
+                f"{record.internal_total_marks or '—'}",
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Assignment Completion</b>",
+                normal_style
+            ),
+            Paragraph(
+                f"{record.completed_assignments} / "
+                f"{record.total_assignments}",
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Attendance</b>",
+                normal_style
+            ),
+            Paragraph(
+                f"{record.attendance or '—'}%",
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Study Hours</b>",
+                normal_style
+            ),
+            Paragraph(
+                f"{record.study_hours or '—'} hours/week",
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Sleep Hours</b>",
+                normal_style
+            ),
+            Paragraph(
+                f"{record.sleep_hours or '—'} hours",
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Participation</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.participation or "—"),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Backlogs</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.backlogs),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Past Failures</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.past_failures),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Tutoring Sessions</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.tutoring_sessions),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Learning Mode</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.learning_mode or "—"),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Internet Access</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.internet_access or "—"),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Motivation Level</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.motivation_level or "—"),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Parental Involvement</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.parental_involvement or "—"),
+                normal_style
+            )
+        ],
+        [
+            Paragraph(
+                "<b>Extracurricular</b>",
+                normal_style
+            ),
+            Paragraph(
+                str(record.extracurricular or "—"),
+                normal_style
+            )
+        ]
+    ]
+
+    academic_table = Table(
+        academic_data,
+        colWidths=[
+            70 * mm,
+            95 * mm
+        ]
+    )
+
+    academic_table.setStyle(
+        TableStyle([
+            (
+                "GRID",
+                (0, 0),
+                (-1, -1),
+                0.5,
+                colors.grey
+            ),
+            (
+                "BACKGROUND",
+                (0, 0),
+                (0, -1),
+                colors.whitesmoke
+            ),
+            (
+                "VALIGN",
+                (0, 0),
+                (-1, -1),
+                "MIDDLE"
+            ),
+            (
+                "LEFTPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "RIGHTPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "TOPPADDING",
+                (0, 0),
+                (-1, -1),
+                5
+            ),
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, -1),
+                5
+            )
+        ])
+    )
+
+    story.append(academic_table)
+
+    # =========================================================
+    # SHAP EXPLANATION
+    # =========================================================
+
+    story.append(
+        Paragraph(
+            "Explainable AI – Factor Impact (SHAP)",
+            heading_style
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "SHAP values explain how individual factors "
+            "contributed to the model prediction. Positive "
+            "values indicate positive contribution, while "
+            "negative values indicate negative contribution.",
+            small_style
+        )
+    )
+
+    # =========================================================
+    # ALL SHAP FACTORS
+    # =========================================================
+
+    if factors:
+
+        shap_data = [
+            [
+                Paragraph(
+                    "<b>Factor</b>",
+                    normal_style
+                ),
+                Paragraph(
+                    "<b>SHAP Impact</b>",
+                    normal_style
+                ),
+                Paragraph(
+                    "<b>Contribution</b>",
+                    normal_style
+                )
+            ]
+        ]
+
+        for factor in factors:
+
+            factor_name = factor.get(
+                "name",
+                "Unknown"
+            )
+
+            shap_value = factor.get(
+                "shap_value",
+                0
+            )
+
+            try:
+                shap_value = float(
+                    shap_value
+                )
+            except (
+                TypeError,
+                ValueError
+            ):
+                shap_value = 0.0
+
+            if shap_value > 0:
+
+                impact_text = (
+                    f"+{shap_value:.6f}"
+                )
+
+                contribution = "Positive"
+
+            elif shap_value < 0:
+
+                impact_text = (
+                    f"{shap_value:.6f}"
+                )
+
+                contribution = "Negative"
+
+            else:
+
+                impact_text = "0.000000"
+
+                contribution = "Neutral"
+
+            shap_data.append(
+                [
+                    Paragraph(
+                        str(factor_name),
+                        normal_style
+                    ),
+                    Paragraph(
+                        impact_text,
+                        normal_style
+                    ),
+                    Paragraph(
+                        contribution,
+                        normal_style
+                    )
+                ]
+            )
+
+        shap_table = Table(
+            shap_data,
+            colWidths=[
+                70 * mm,
+                45 * mm,
+                50 * mm
+            ],
+            repeatRows=1
+        )
+
+        shap_styles = [
+            (
+                "GRID",
+                (0, 0),
+                (-1, -1),
+                0.5,
+                colors.grey
+            ),
+            (
+                "BACKGROUND",
+                (0, 0),
+                (-1, 0),
+                colors.whitesmoke
+            ),
+            (
+                "VALIGN",
+                (0, 0),
+                (-1, -1),
+                "MIDDLE"
+            ),
+            (
+                "LEFTPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "RIGHTPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "TOPPADDING",
+                (0, 0),
+                (-1, -1),
+                5
+            ),
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, -1),
+                5
+            )
+        ]
+
+        # Add contribution text colors
+        for index, factor in enumerate(
+            factors,
+            start=1
+        ):
+
+            shap_value = factor.get(
+                "shap_value",
+                0
+            )
+
+            try:
+                shap_value = float(
+                    shap_value
+                )
+            except (
+                TypeError,
+                ValueError
+            ):
+                shap_value = 0.0
+
+            if shap_value > 0:
+
+                shap_styles.append(
+                    (
+                        "TEXTCOLOR",
+                        (2, index),
+                        (2, index),
+                        colors.green
+                    )
+                )
+
+            elif shap_value < 0:
+
+                shap_styles.append(
+                    (
+                        "TEXTCOLOR",
+                        (2, index),
+                        (2, index),
+                        colors.red
+                    )
+                )
+
+        shap_table.setStyle(
+            TableStyle(shap_styles)
+        )
+
+        story.append(shap_table)
+
+    else:
+
+        story.append(
+            Paragraph(
+                "No SHAP factor data available.",
+                normal_style
+            )
+        )
+
+    # =========================================================
+    # POSITIVE FACTORS
+    # =========================================================
+
+    story.append(
+        Paragraph(
+            "Positive Factors",
+            heading_style
+        )
+    )
+
+    if positive_points:
+
+        for point in positive_points:
+
+            story.append(
+                Paragraph(
+                    f"• {point}",
+                    normal_style
+                )
+            )
+
+    else:
+
+        story.append(
+            Paragraph(
+                "No positive factors identified.",
+                normal_style
+            )
+        )
+
+    # =========================================================
+    # AREAS TO IMPROVE
+    # =========================================================
+
+    story.append(
+        Paragraph(
+            "Areas to Improve",
+            heading_style
+        )
+    )
+
+    if improve_points:
+
+        for point in improve_points:
+
+            story.append(
+                Paragraph(
+                    f"• {point}",
+                    normal_style
+                )
+            )
+
+    else:
+
+        story.append(
+            Paragraph(
+                "No specific improvement areas identified.",
+                normal_style
+            )
+        )
+
+    # =========================================================
+    # HC-XAI DECISION SUPPORT
+    # =========================================================
+
+    story.append(
+        Spacer(
+            1,
+            12
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "Human-Centered AI Decision Support",
+            heading_style
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "This prediction is intended to support teacher "
+            "decision-making. The AI output should be considered "
+            "alongside the student's academic context. "
+            "The teacher remains the final decision-maker.",
+            small_style
+        )
+    )
+
+    # =========================================================
+    # BUILD PDF
+    # =========================================================
+
+    doc.build(story)
+
     return response
